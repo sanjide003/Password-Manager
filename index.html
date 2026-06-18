@@ -21,6 +21,9 @@
     .custom-scrollbar::-webkit-scrollbar-track { background: #1e293b; border-radius: 4px; }
     .custom-scrollbar::-webkit-scrollbar-thumb { background: #475569; border-radius: 4px; }
     .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #64748b; }
+    
+    /* Custom Input overrides for dark mode date picker */
+    ::-webkit-calendar-picker-indicator { filter: invert(1); cursor: pointer; }
   </style>
 </head>
 <body class="bg-slate-900 text-slate-100 min-h-screen flex flex-col antialiased overflow-x-hidden">
@@ -46,6 +49,25 @@
     </div>
   </div>
 
+  <!-- DATE PICKER MODAL FOR USAGE UPDATE -->
+  <div id="usage-picker-modal" class="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm hidden">
+    <div class="bg-slate-800 border border-slate-700 w-full max-w-sm rounded-2xl p-6 shadow-2xl transform scale-95 transition-all duration-300">
+      <div class="flex items-center space-x-3 text-indigo-400 mb-4">
+        <i class="fas fa-calendar-alt text-xl"></i>
+        <h3 class="text-lg font-bold text-white">Pick Usage Date & Time</h3>
+      </div>
+      <p class="text-slate-400 text-xs mb-4">Select when you last used this account:</p>
+      
+      <input type="hidden" id="usage-record-id">
+      <input type="datetime-local" id="usage-datetime-input" class="w-full bg-slate-900 border border-slate-700 rounded-xl py-3 px-4 text-sm text-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition mb-6">
+      
+      <div class="flex space-x-3 justify-end">
+        <button onclick="closeUsageModal()" class="px-4 py-2 bg-slate-700 hover:bg-slate-600 rounded-xl text-slate-200 text-sm font-semibold transition">Cancel</button>
+        <button onclick="confirmUsageUpdate()" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 rounded-xl text-white text-sm font-semibold transition">Save Record</button>
+      </div>
+    </div>
+  </div>
+
   <!-- SIDEBAR (DRAWER MENU) -->
   <div id="sidebar-overlay" onclick="toggleSidebar()" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 hidden transition-opacity"></div>
   <aside id="sidebar" class="fixed inset-y-0 left-0 w-64 bg-slate-800 border-r border-slate-700 transform -translate-x-full transition-transform duration-300 z-50 flex flex-col">
@@ -57,11 +79,11 @@
       <button onclick="toggleSidebar()" class="text-slate-400 hover:text-white p-1 rounded-lg transition"><i class="fas fa-times text-lg"></i></button>
     </div>
     <nav class="p-4 space-y-3 flex-grow">
-      <!-- Reordered Tabs: Create Account First -->
-      <button onclick="openAddModalFromSidebar()" class="w-full flex items-center gap-3 px-4 py-3.5 bg-indigo-600/10 text-indigo-400 rounded-xl font-semibold transition hover:bg-indigo-600/20 border border-indigo-500/20 shadow-sm">
+      <!-- Tabs switching logic attached -->
+      <button onclick="switchView('view-create-account')" id="tab-create" class="w-full flex items-center gap-3 px-4 py-3.5 bg-indigo-600/10 text-indigo-400 rounded-xl font-semibold transition hover:bg-indigo-600/20 border border-indigo-500/20 shadow-sm tab-btn">
         <i class="fas fa-user-plus w-5"></i> Create Account
       </button>
-      <button onclick="showAllAccounts()" class="w-full flex items-center gap-3 px-4 py-3.5 text-slate-300 rounded-xl font-semibold transition hover:bg-slate-700 border border-transparent">
+      <button onclick="switchView('view-all-accounts')" id="tab-all" class="w-full flex items-center gap-3 px-4 py-3.5 text-slate-300 rounded-xl font-semibold transition hover:bg-slate-700 border border-transparent tab-btn">
         <i class="fas fa-table w-5"></i> All Accounts
       </button>
     </nav>
@@ -127,147 +149,169 @@
             </div>
           </div>
         </div>
-        
-        <div class="flex items-center gap-3 w-full sm:w-auto justify-end">
-          <button onclick="openAddModal()" class="flex-grow sm:flex-grow-0 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold px-5 py-2.5 rounded-xl transition flex items-center justify-center gap-2 text-sm shadow-md">
-            <i class="fas fa-plus"></i>
-            <span>Add Account</span>
-          </button>
-        </div>
       </div>
     </header>
 
     <!-- Main Content Area -->
-    <main class="max-w-7xl mx-auto px-4 py-6 flex-grow w-full relative z-10 flex flex-col">
-      <!-- Tools Row: Search & Sorting -->
-      <div class="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 mb-4 flex-none">
-        
-        <!-- Search Box -->
-        <div class="relative w-full lg:max-w-sm">
-          <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-500">
-            <i class="fas fa-search"></i>
-          </span>
-          <input type="text" id="search-input" oninput="renderTable()" placeholder="Search platform or email..." 
-            class="w-full bg-slate-800 border border-slate-700 rounded-xl py-2.5 pl-10 pr-4 text-sm text-slate-100 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition shadow-sm">
-        </div>
+    <main class="max-w-7xl mx-auto px-4 py-6 flex-grow w-full relative z-10 flex flex-col overflow-hidden">
+      
+      <!-- ==========================================
+           VIEW 1: CREATE / EDIT ACCOUNT FORM
+           ========================================== -->
+      <div id="view-create-account" class="flex-grow overflow-y-auto custom-scrollbar">
+        <div class="max-w-2xl mx-auto bg-slate-800 border border-slate-700 rounded-3xl overflow-hidden shadow-xl">
+          <div class="bg-slate-700/50 px-6 py-5 border-b border-slate-700">
+            <h2 id="form-title" class="text-xl font-bold text-white flex items-center gap-2">
+              <i class="fas fa-user-plus text-indigo-400"></i>
+              <span>Create New Account</span>
+            </h2>
+            <p class="text-xs text-slate-400 mt-1">Username and password are mandatory, other fields are optional.</p>
+          </div>
 
-        <!-- Sorting & Stats -->
-        <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full lg:w-auto">
-          <div class="relative flex-grow sm:flex-grow-0 min-w-[220px]">
-            <span class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-500">
-              <i class="fas fa-sort-amount-down text-sm"></i>
-            </span>
-            <select id="sort-select" onchange="renderTable()" class="w-full bg-slate-800 border border-slate-700 rounded-xl py-2.5 pl-9 pr-8 text-sm text-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-500 appearance-none cursor-pointer">
-              <option value="created_desc">Created: Newest First</option>
-              <option value="created_asc">Created: Oldest First</option>
-              <option value="alpha_asc">Alphabetical (A-Z)</option>
-              <option value="last_used_asc">Last Used: Seen Last</option>
-              <option value="last_used_desc">Last Used: Seen First</option>
-            </select>
-            <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-slate-400">
-              <i class="fas fa-chevron-down text-xs"></i>
+          <form id="record-form" class="p-6 space-y-5" onsubmit="saveRecord(event)">
+            <input type="hidden" id="record-id">
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+              <!-- Platform (Optional) -->
+              <div class="md:col-span-2">
+                <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1.5">Platform / Company <span class="text-slate-500 font-normal normal-case">(Optional)</span></label>
+                <div class="relative">
+                  <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center text-slate-500"><i class="fas fa-building text-sm"></i></span>
+                  <input type="text" id="platform-input" placeholder="e.g. Google, AWS..."
+                    class="w-full bg-slate-900 border border-slate-700 rounded-xl py-3 pl-10 pr-4 text-sm text-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition">
+                </div>
+              </div>
+
+              <!-- Username (Required) -->
+              <div>
+                <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1.5">Email ID / Username <span class="text-rose-400">*</span></label>
+                <div class="relative">
+                  <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center text-slate-500"><i class="fas fa-user text-sm"></i></span>
+                  <input type="text" id="email-input" required placeholder="Enter username or email..."
+                    class="w-full bg-slate-900 border border-slate-700 rounded-xl py-3 pl-10 pr-4 text-sm text-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition">
+                </div>
+              </div>
+
+              <!-- Password (Required) -->
+              <div>
+                <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1.5">Password <span class="text-rose-400">*</span></label>
+                <div class="relative">
+                  <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center text-slate-500"><i class="fas fa-key text-sm"></i></span>
+                  <input type="password" id="password-input" required placeholder="Enter password..."
+                    class="w-full bg-slate-900 border border-slate-700 rounded-xl py-3 pl-10 pr-12 text-sm text-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition">
+                  <button type="button" onclick="togglePasswordVisibility('password-input')" class="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300">
+                    <i class="fas fa-eye text-sm"></i>
+                  </button>
+                </div>
+              </div>
+
+              <!-- Recovery Phone (Optional) -->
+              <div>
+                <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1.5">Recovery Phone <span class="text-slate-500 font-normal normal-case">(Optional)</span></label>
+                <div class="relative">
+                  <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center text-slate-500"><i class="fas fa-phone text-sm"></i></span>
+                  <input type="text" id="phone-input" placeholder="Recovery phone number..."
+                    class="w-full bg-slate-900 border border-slate-700 rounded-xl py-3 pl-10 pr-4 text-sm text-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition">
+                </div>
+              </div>
+
+              <!-- Recovery Email (Optional) -->
+              <div>
+                <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1.5">Recovery Email <span class="text-slate-500 font-normal normal-case">(Optional)</span></label>
+                <div class="relative">
+                  <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center text-slate-500"><i class="fas fa-envelope text-sm"></i></span>
+                  <input type="text" id="recovery-email-input" placeholder="Recovery email ID..."
+                    class="w-full bg-slate-900 border border-slate-700 rounded-xl py-3 pl-10 pr-4 text-sm text-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition">
+                </div>
+              </div>
+
+              <!-- Description / Notes (Optional) -->
+              <div class="md:col-span-2">
+                <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1.5">Description / Notes <span class="text-slate-500 font-normal normal-case">(Optional)</span></label>
+                <textarea id="notes-input" rows="3" placeholder="Security questions, hints, or additional info..."
+                  class="w-full bg-slate-900 border border-slate-700 rounded-xl py-3 px-4 text-sm text-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition resize-none"></textarea>
+              </div>
+            </div>
+
+            <div class="pt-5 border-t border-slate-700 flex justify-end gap-3">
+              <button type="button" onclick="switchView('view-all-accounts')" class="px-6 py-3 bg-slate-700 hover:bg-slate-600 text-slate-200 font-semibold rounded-xl transition text-sm">Cancel</button>
+              <button type="submit" class="px-8 py-3 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold rounded-xl transition text-sm flex items-center gap-2 shadow-lg shadow-indigo-600/20">
+                <i class="fas fa-save"></i> <span>Save Account</span>
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <!-- ==========================================
+           VIEW 2: ALL ACCOUNTS TABLE
+           ========================================== -->
+      <div id="view-all-accounts" class="hidden flex-grow flex flex-col">
+        <!-- Tools Row: Search & Sorting -->
+        <div class="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 mb-4 flex-none">
+          <div class="relative w-full lg:max-w-sm">
+            <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-500"><i class="fas fa-search"></i></span>
+            <input type="text" id="search-input" oninput="renderTable()" placeholder="Search platform or email..." 
+              class="w-full bg-slate-800 border border-slate-700 rounded-xl py-2.5 pl-10 pr-4 text-sm text-slate-100 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition shadow-sm">
+          </div>
+
+          <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full lg:w-auto">
+            <div class="relative flex-grow sm:flex-grow-0 min-w-[220px]">
+              <span class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-500"><i class="fas fa-sort-amount-down text-sm"></i></span>
+              <select id="sort-select" onchange="renderTable()" class="w-full bg-slate-800 border border-slate-700 rounded-xl py-2.5 pl-9 pr-8 text-sm text-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-500 appearance-none cursor-pointer">
+                <option value="created_desc">Created: Newest First</option>
+                <option value="created_asc">Created: Oldest First</option>
+                <option value="alpha_asc">Alphabetical (A-Z)</option>
+                <option value="last_used_asc">Last Used: Seen Last</option>
+                <option value="last_used_desc">Last Used: Seen First</option>
+              </select>
+              <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-slate-400"><i class="fas fa-chevron-down text-xs"></i></div>
+            </div>
+            
+            <div class="text-xs text-slate-400 font-semibold bg-slate-800 px-4 py-3 rounded-xl border border-slate-700 shadow-sm flex items-center justify-center whitespace-nowrap">
+              Total Saved: <span id="total-count" class="text-indigo-400 font-extrabold text-sm ml-1.5">0</span>
             </div>
           </div>
-          
-          <div class="text-xs text-slate-400 font-semibold bg-slate-800 px-4 py-3 rounded-xl border border-slate-700 shadow-sm flex items-center justify-center whitespace-nowrap">
-            Total Saved: <span id="total-count" class="text-indigo-400 font-extrabold text-sm ml-1.5">0</span>
-          </div>
         </div>
 
-      </div>
-
-      <!-- Loading State Spinner -->
-      <div id="loading-spinner" class="flex-none flex flex-col items-center justify-center py-20">
-        <div class="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-indigo-500 mb-4"></div>
-        <p class="text-slate-400 text-sm">Decrypting credentials...</p>
-      </div>
-
-      <!-- No Data State Placeholder -->
-      <div id="empty-state" class="hidden flex-none text-center py-16 border-2 border-dashed border-slate-700 bg-slate-800/30 rounded-3xl p-8 max-w-md mx-auto mt-10">
-        <div class="text-slate-600 text-5xl mb-4"><i class="fas fa-table-list"></i></div>
-        <h3 class="text-lg font-bold text-slate-300 mb-2">Vault is Empty</h3>
-        <p class="text-slate-400 text-xs leading-relaxed mb-6">
-          Your credential table is currently empty. Click the button to add your first account.
-        </p>
-        <button onclick="openAddModal()" class="inline-flex bg-indigo-600 hover:bg-indigo-500 text-white font-bold px-5 py-2.5 rounded-xl text-sm transition items-center gap-2 shadow-sm">
-          <i class="fas fa-plus"></i> Add Account
-        </button>
-      </div>
-
-      <!-- Table Container -->
-      <div id="table-container" class="hidden flex-grow overflow-hidden bg-slate-800 border border-slate-700 rounded-2xl shadow-xl flex flex-col min-h-[400px]">
-        <div class="overflow-x-auto overflow-y-auto custom-scrollbar flex-grow">
-          <table class="w-full text-left border-collapse whitespace-nowrap min-w-[900px]">
-            <thead class="bg-slate-900/80 text-slate-400 text-[11px] uppercase tracking-wider sticky top-0 z-20 backdrop-blur-md">
-              <tr>
-                <th class="px-5 py-4 font-bold border-b border-slate-700 w-16 text-center">No.</th>
-                <th class="px-5 py-4 font-bold border-b border-slate-700 w-48">Platform</th>
-                <th class="px-5 py-4 font-bold border-b border-slate-700">Email / Username</th>
-                <th class="px-5 py-4 font-bold border-b border-slate-700 w-64">Password</th>
-                <th class="px-5 py-4 font-bold border-b border-slate-700 text-center w-64">Actions</th>
-              </tr>
-            </thead>
-            <tbody id="table-body" class="text-sm text-slate-200 divide-y divide-slate-700/50">
-              <!-- Dynamically populated rows -->
-            </tbody>
-          </table>
-        </div>
-      </div>
-      
-    </main>
-  </div>
-
-  <!-- 3. ADD / EDIT RECORD MODAL -->
-  <div id="record-modal" class="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm hidden">
-    <div class="bg-slate-800 border border-slate-700 w-full max-w-lg rounded-3xl overflow-hidden shadow-2xl transform scale-95 transition-all duration-300">
-      <div class="bg-slate-700/50 px-6 py-4 flex justify-between items-center border-b border-slate-700">
-        <h2 id="modal-form-title" class="text-lg font-bold text-white flex items-center gap-2">
-          <i class="fas fa-id-card-clip text-indigo-400"></i>
-          <span>Add New Account</span>
-        </h2>
-        <button onclick="closeRecordModal()" class="text-slate-400 hover:text-white p-1 rounded-lg transition"><i class="fas fa-times text-lg"></i></button>
-      </div>
-
-      <form id="record-form" class="p-6 space-y-4" onsubmit="saveRecord(event)">
-        <input type="hidden" id="record-id">
-        <div>
-          <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1.5">Platform / Company</label>
-          <div class="relative">
-            <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center text-slate-500"><i class="fas fa-building text-sm"></i></span>
-            <input type="text" id="platform-input" required placeholder="e.g. Google, AWS..."
-              class="w-full bg-slate-900 border border-slate-700 rounded-xl py-2.5 pl-10 pr-4 text-sm text-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition">
-          </div>
+        <!-- Loading State -->
+        <div id="loading-spinner" class="flex-none flex flex-col items-center justify-center py-20">
+          <div class="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-indigo-500 mb-4"></div>
+          <p class="text-slate-400 text-sm">Decrypting credentials...</p>
         </div>
 
-        <div>
-          <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1.5">Email ID / Username</label>
-          <div class="relative">
-            <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center text-slate-500"><i class="fas fa-envelope text-sm"></i></span>
-            <input type="text" id="email-input" required placeholder="Enter username..."
-              class="w-full bg-slate-900 border border-slate-700 rounded-xl py-2.5 pl-10 pr-4 text-sm text-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition">
-          </div>
-        </div>
-
-        <div>
-          <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1.5">Password</label>
-          <div class="relative">
-            <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center text-slate-500"><i class="fas fa-key text-sm"></i></span>
-            <input type="password" id="password-input" required placeholder="Enter password..."
-              class="w-full bg-slate-900 border border-slate-700 rounded-xl py-2.5 pl-10 pr-12 text-sm text-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition">
-            <button type="button" onclick="togglePasswordVisibility('password-input')" class="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300">
-              <i class="fas fa-eye text-sm"></i>
-            </button>
-          </div>
-        </div>
-
-        <div class="flex space-x-3 pt-4 border-t border-slate-700">
-          <button type="button" onclick="closeRecordModal()" class="w-1/2 bg-slate-700 hover:bg-slate-600 text-slate-200 font-semibold py-3 rounded-xl transition text-sm">Close</button>
-          <button type="submit" class="w-1/2 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold py-3 rounded-xl transition text-sm flex items-center justify-center gap-2">
-            <i class="fas fa-save"></i> <span>Save Data</span>
+        <!-- Empty State -->
+        <div id="empty-state" class="hidden flex-none text-center py-16 border-2 border-dashed border-slate-700 bg-slate-800/30 rounded-3xl p-8 max-w-md mx-auto mt-10">
+          <div class="text-slate-600 text-5xl mb-4"><i class="fas fa-table-list"></i></div>
+          <h3 class="text-lg font-bold text-slate-300 mb-2">Vault is Empty</h3>
+          <p class="text-slate-400 text-xs leading-relaxed mb-6">Your credential table is currently empty.</p>
+          <button onclick="switchView('view-create-account')" class="inline-flex bg-indigo-600 hover:bg-indigo-500 text-white font-bold px-5 py-2.5 rounded-xl text-sm transition items-center gap-2 shadow-sm">
+            <i class="fas fa-plus"></i> Add Account
           </button>
         </div>
-      </form>
-    </div>
+
+        <!-- Table Container -->
+        <div id="table-container" class="hidden flex-grow overflow-hidden bg-slate-800 border border-slate-700 rounded-2xl shadow-xl flex flex-col min-h-[400px]">
+          <div class="overflow-x-auto overflow-y-auto custom-scrollbar flex-grow">
+            <table class="w-full text-left border-collapse whitespace-nowrap min-w-[1000px]">
+              <thead class="bg-slate-900/80 text-slate-400 text-[11px] uppercase tracking-wider sticky top-0 z-20 backdrop-blur-md">
+                <tr>
+                  <th class="px-5 py-4 font-bold border-b border-slate-700 w-16 text-center">No.</th>
+                  <th class="px-5 py-4 font-bold border-b border-slate-700 w-48">Platform</th>
+                  <th class="px-5 py-4 font-bold border-b border-slate-700">Email / Username</th>
+                  <th class="px-5 py-4 font-bold border-b border-slate-700 w-56">Password</th>
+                  <th class="px-5 py-4 font-bold border-b border-slate-700 w-32">Latest Date</th>
+                  <th class="px-5 py-4 font-bold border-b border-slate-700 text-center w-64">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="table-body" class="text-sm text-slate-200 divide-y divide-slate-700/50">
+                <!-- Dynamically populated rows -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </main>
   </div>
 
   <!-- 4. USAGE HISTORY MODAL -->
@@ -353,6 +397,7 @@
     function proceedToDashboard() {
       document.getElementById('auth-screen').classList.add('hidden');
       document.getElementById('dashboard-screen').classList.remove('hidden');
+      switchView('view-create-account'); // Default open Create Account tab
       listenToCredentials();
     }
 
@@ -380,11 +425,14 @@
           const data = doc.data();
           items.push({
             id: doc.id,
-            platform: data.platform,
+            platform: data.platform || 'Unknown',
             email: window.decryptData(data.email, window.state.masterKey),
             password: window.decryptData(data.password, window.state.masterKey),
+            phone: window.decryptData(data.phone, window.state.masterKey),
+            recoveryEmail: window.decryptData(data.recoveryEmail, window.state.masterKey),
+            notes: window.decryptData(data.notes, window.state.masterKey),
             createdAt: data.createdAt,
-            lastUsedAt: data.lastUsedAt || data.createdAt, // Fallback for sorting
+            lastUsedAt: data.lastUsedAt || data.createdAt,
             usageHistory: data.usageHistory || []
           });
         });
@@ -405,11 +453,17 @@
       const platform = document.getElementById('platform-input').value.trim();
       const email = document.getElementById('email-input').value.trim();
       const password = document.getElementById('password-input').value.trim();
+      const phone = document.getElementById('phone-input').value.trim();
+      const recoveryEmail = document.getElementById('recovery-email-input').value.trim();
+      const notes = document.getElementById('notes-input').value.trim();
 
       const payload = {
         platform: platform, 
         email: window.encryptData(email, window.state.masterKey),
         password: window.encryptData(password, window.state.masterKey),
+        phone: window.encryptData(phone, window.state.masterKey),
+        recoveryEmail: window.encryptData(recoveryEmail, window.state.masterKey),
+        notes: window.encryptData(notes, window.state.masterKey),
         updatedAt: new Date().toISOString()
       };
 
@@ -417,16 +471,19 @@
         if (id) {
           const docRef = doc(db, 'artifacts', appId, 'users', window.state.user.uid, 'credentials', id);
           await updateDoc(docRef, payload);
-          showToast("Account Updated!");
+          showToast("Account Updated Successfully!");
         } else {
           payload.createdAt = new Date().toISOString();
           payload.lastUsedAt = payload.createdAt;
-          payload.usageHistory = [payload.createdAt]; // First creation counts as usage
+          payload.usageHistory = [payload.createdAt];
           const collRef = collection(db, 'artifacts', appId, 'users', window.state.user.uid, 'credentials');
           await addDoc(collRef, payload);
-          showToast("Account Saved!");
+          showToast("New Account Saved Successfully!");
         }
-        closeRecordModal();
+        
+        // Auto-switch to table view after saving
+        switchView('view-all-accounts');
+        
       } catch (err) { showToast("Save failed!", true); }
     };
 
@@ -440,54 +497,89 @@
       });
     };
 
-    // New Update (Log Usage) Function
-    window.logUsageAction = async function(id, name) {
+    // Confirm and Save Date Picker logic
+    window.confirmUsageUpdate = async function() {
       if (!window.state.user) return;
+      const id = document.getElementById('usage-record-id').value;
+      const selectedDate = document.getElementById('usage-datetime-input').value;
       
-      // Confirm before logging
-      const confirmMsg = `Record an usage update for '${name}' right now?`;
-      document.getElementById('modal-confirm-btn').classList.replace('bg-rose-600', 'bg-indigo-600');
-      document.getElementById('modal-confirm-btn').classList.replace('hover:bg-rose-500', 'hover:bg-indigo-500');
+      if(!selectedDate) {
+        showToast("Please select a date and time", true);
+        return;
+      }
 
-      showCustomConfirm("Update Usage", confirmMsg, async () => {
-        try {
-          const now = new Date().toISOString();
-          const docRef = doc(db, 'artifacts', appId, 'users', window.state.user.uid, 'credentials', id);
-          await updateDoc(docRef, {
-            usageHistory: arrayUnion(now),
-            lastUsedAt: now
-          });
-          showToast("Usage updated successfully!");
-        } catch (err) {
-          console.error(err);
-          showToast("Failed to update usage", true);
-        }
-        // Reset confirm button colors for delete operations
-        setTimeout(() => {
-          document.getElementById('modal-confirm-btn').classList.replace('bg-indigo-600', 'bg-rose-600');
-          document.getElementById('modal-confirm-btn').classList.replace('hover:bg-indigo-500', 'hover:bg-rose-500');
-        }, 500);
-      });
-    };
+      try {
+        const isoDate = new Date(selectedDate).toISOString();
+        const docRef = doc(db, 'artifacts', appId, 'users', window.state.user.uid, 'credentials', id);
+        
+        await updateDoc(docRef, {
+          usageHistory: arrayUnion(isoDate),
+          lastUsedAt: isoDate
+        });
+        
+        showToast("Usage date updated successfully!");
+        closeUsageModal();
+      } catch (err) {
+        console.error(err);
+        showToast("Failed to update usage", true);
+      }
+    }
 
   </script>
 
-  <!-- PURE JS LOGIC (Table Render & Sorting) -->
+  <!-- PURE JS LOGIC (Navigation, Modal, Table Render & Sorting) -->
   <script>
+    // Tab Navigation
+    function switchView(viewId) {
+      document.getElementById('view-create-account').classList.add('hidden');
+      document.getElementById('view-all-accounts').classList.add('hidden');
+      
+      document.getElementById('tab-create').classList.remove('bg-indigo-600/10', 'text-indigo-400', 'border-indigo-500/20');
+      document.getElementById('tab-create').classList.add('text-slate-300', 'border-transparent');
+      
+      document.getElementById('tab-all').classList.remove('bg-indigo-600/10', 'text-indigo-400', 'border-indigo-500/20');
+      document.getElementById('tab-all').classList.add('text-slate-300', 'border-transparent');
+
+      // Setup active states
+      document.getElementById(viewId).classList.remove('hidden');
+      
+      if(viewId === 'view-create-account') {
+        document.getElementById('tab-create').classList.add('bg-indigo-600/10', 'text-indigo-400', 'border-indigo-500/20');
+        document.getElementById('tab-create').classList.remove('text-slate-300', 'border-transparent');
+        // Clear inputs for fresh creation
+        if(document.getElementById('form-title').innerText !== "Edit Account") {
+           clearForm();
+        }
+      } else {
+        document.getElementById('tab-all').classList.add('bg-indigo-600/10', 'text-indigo-400', 'border-indigo-500/20');
+        document.getElementById('tab-all').classList.remove('text-slate-300', 'border-transparent');
+      }
+      
+      if(window.innerWidth < 1024) toggleSidebar();
+    }
+    
+    function clearForm() {
+      document.getElementById('record-id').value = "";
+      document.getElementById('platform-input').value = "";
+      document.getElementById('email-input').value = "";
+      document.getElementById('password-input').value = "";
+      document.getElementById('password-input').type = "password";
+      document.getElementById('phone-input').value = "";
+      document.getElementById('recovery-email-input').value = "";
+      document.getElementById('notes-input').value = "";
+      document.getElementById('form-title').innerHTML = `<i class="fas fa-user-plus text-indigo-400"></i> <span>Create New Account</span>`;
+    }
+
     function toggleSidebar() {
-      document.getElementById('sidebar').classList.toggle('-translate-x-full');
-      document.getElementById('sidebar-overlay').classList.toggle('hidden');
-    }
-
-    function showAllAccounts() {
-      toggleSidebar();
-      document.getElementById('search-input').value = "";
-      window.renderTable();
-    }
-
-    function openAddModalFromSidebar() {
-      toggleSidebar();
-      openAddModal();
+      const sidebar = document.getElementById('sidebar');
+      const overlay = document.getElementById('sidebar-overlay');
+      if (sidebar.classList.contains('-translate-x-full')) {
+        sidebar.classList.remove('-translate-x-full');
+        overlay.classList.remove('hidden');
+      } else {
+        sidebar.classList.add('-translate-x-full');
+        overlay.classList.add('hidden');
+      }
     }
 
     function showToast(msg, isErr = false) {
@@ -531,6 +623,22 @@
       document.body.removeChild(temp);
     }
 
+    // Modal format to ISO local time string for the datetime-local input
+    function getLocalIsoString(date) {
+      const tzOffset = date.getTimezoneOffset() * 60000; // offset in milliseconds
+      return (new Date(date.getTime() - tzOffset)).toISOString().slice(0, 16);
+    }
+
+    window.openUsageModal = function(id) {
+      document.getElementById('usage-record-id').value = id;
+      // Set current date & time as default
+      document.getElementById('usage-datetime-input').value = getLocalIsoString(new Date());
+      document.getElementById('usage-picker-modal').classList.remove('hidden');
+    }
+    window.closeUsageModal = function() {
+      document.getElementById('usage-picker-modal').classList.add('hidden');
+    }
+
     // MAIN TABLE RENDERER
     window.renderTable = function() {
       const tbody = document.getElementById('table-body');
@@ -543,19 +651,19 @@
       let items = [...(window.state.credentials || [])];
 
       // Filtering
-      items = items.filter(i => i.platform.toLowerCase().includes(query) || i.email.toLowerCase().includes(query));
+      items = items.filter(i => (i.platform && i.platform.toLowerCase().includes(query)) || i.email.toLowerCase().includes(query));
 
       // Sorting Logic
       items.sort((a, b) => {
-        if (sortVal === 'alpha_asc') return a.platform.localeCompare(b.platform);
+        if (sortVal === 'alpha_asc') return (a.platform||'').localeCompare(b.platform||'');
         if (sortVal === 'created_desc') return new Date(b.createdAt) - new Date(a.createdAt);
         if (sortVal === 'created_asc') return new Date(a.createdAt) - new Date(b.createdAt);
         
         const dA = new Date(a.lastUsedAt).getTime();
         const dB = new Date(b.lastUsedAt).getTime();
         
-        if (sortVal === 'last_used_asc') return dA - dB; // Oldest used first (Recently used at bottom)
-        if (sortVal === 'last_used_desc') return dB - dA; // Recently used at top
+        if (sortVal === 'last_used_asc') return dA - dB; 
+        if (sortVal === 'last_used_desc') return dB - dA; 
         return 0;
       });
 
@@ -572,22 +680,28 @@
       emptyState.classList.add('hidden');
 
       items.forEach((item, index) => {
-        const safePlatform = item.platform.replace(/'/g, "\\'");
+        const safePlatform = (item.platform||'').replace(/'/g, "\\'");
         const safeEmail = item.email.replace(/'/g, "\\'");
         const safePassword = item.password.replace(/'/g, "\\'");
+        
+        const lastUsedDateObj = new Date(item.lastUsedAt);
+        const lastUsedStr = lastUsedDateObj.toLocaleDateString('en-IN', { day:'2-digit', month:'short', year:'numeric' });
 
         const tr = document.createElement('tr');
         tr.className = "hover:bg-slate-800/80 transition-colors group";
         
+        let platformDisplay = item.platform || '<span class="text-slate-500 italic">No Platform</span>';
+        let initial = item.platform ? item.platform.charAt(0).toUpperCase() : '?';
+
         tr.innerHTML = `
           <td class="px-5 py-4 text-center text-slate-500 font-mono text-xs">${index + 1}</td>
           
           <td class="px-5 py-4">
             <div class="flex items-center gap-3">
               <div class="w-8 h-8 rounded-lg bg-indigo-600/10 text-indigo-400 flex items-center justify-center font-bold text-sm flex-none">
-                ${item.platform.charAt(0).toUpperCase()}
+                ${initial}
               </div>
-              <span class="font-semibold text-white truncate max-w-[150px]" title="${item.platform}">${item.platform}</span>
+              <span class="font-semibold text-white truncate max-w-[150px]" title="${item.platform||''}">${platformDisplay}</span>
             </div>
           </td>
           
@@ -607,14 +721,22 @@
               </div>
             </div>
           </td>
+
+          <!-- NEW LATEST DATE COLUMN -->
+          <td class="px-5 py-4">
+             <div class="flex flex-col">
+                <span class="text-[12px] font-semibold text-slate-300">${lastUsedStr}</span>
+                <span class="text-[10px] text-slate-500 font-mono">${lastUsedDateObj.toLocaleTimeString('en-IN', { hour:'2-digit', minute:'2-digit' })}</span>
+             </div>
+          </td>
           
           <td class="px-5 py-4 text-center">
             <div class="flex items-center justify-center gap-1.5">
-              <button onclick="openEditModal('${item.id}')" class="w-8 h-8 rounded-lg bg-slate-700 text-slate-300 hover:bg-indigo-600 hover:text-white transition flex items-center justify-center" title="Edit Data">
+              <button onclick="openEditView('${item.id}')" class="w-8 h-8 rounded-lg bg-slate-700 text-slate-300 hover:bg-indigo-600 hover:text-white transition flex items-center justify-center" title="Edit Data">
                 <i class="fas fa-edit text-xs"></i>
               </button>
-              <button onclick="window.logUsageAction('${item.id}', '${safePlatform}')" class="w-8 h-8 rounded-lg bg-slate-700 text-slate-300 hover:bg-emerald-600 hover:text-white transition flex items-center justify-center" title="Update Usage Log">
-                <i class="fas fa-check-double text-xs"></i>
+              <button onclick="openUsageModal('${item.id}')" class="w-8 h-8 rounded-lg bg-slate-700 text-slate-300 hover:bg-emerald-600 hover:text-white transition flex items-center justify-center" title="Update Usage Log (Pick Date)">
+                <i class="fas fa-calendar-plus text-xs"></i>
               </button>
               <button onclick="showHistoryModal('${item.id}')" class="w-8 h-8 rounded-lg bg-slate-700 text-slate-300 hover:bg-amber-500 hover:text-white transition flex items-center justify-center" title="View Usage History">
                 <i class="fas fa-clock-rotate-left text-xs"></i>
@@ -645,30 +767,23 @@
       }
     }
 
-    // Modal Control Logic
-    function openAddModal() {
-      document.getElementById('record-id').value = "";
-      document.getElementById('platform-input').value = "";
-      document.getElementById('email-input').value = "";
-      document.getElementById('password-input').value = "";
-      document.getElementById('password-input').type = "password";
-      document.getElementById('modal-form-title').querySelector('span').textContent = "Add New Account";
-      document.getElementById('record-modal').classList.remove('hidden');
-    }
-
-    function openEditModal(id) {
+    // Replaced openEditModal to open inside the new View instead of modal
+    function openEditView(id) {
       const record = window.state.credentials.find(i => i.id === id);
       if (!record) return;
+      
       document.getElementById('record-id').value = record.id;
-      document.getElementById('platform-input').value = record.platform;
-      document.getElementById('email-input').value = record.email;
-      document.getElementById('password-input').value = record.password;
+      document.getElementById('platform-input').value = record.platform || "";
+      document.getElementById('email-input').value = record.email || "";
+      document.getElementById('password-input').value = record.password || "";
       document.getElementById('password-input').type = "password";
-      document.getElementById('modal-form-title').querySelector('span').textContent = "Edit Account";
-      document.getElementById('record-modal').classList.remove('hidden');
+      document.getElementById('phone-input').value = record.phone || "";
+      document.getElementById('recovery-email-input').value = record.recoveryEmail || "";
+      document.getElementById('notes-input').value = record.notes || "";
+      
+      document.getElementById('form-title').innerHTML = `<i class="fas fa-user-edit text-amber-400"></i> <span>Edit Account</span>`;
+      switchView('view-create-account');
     }
-
-    function closeRecordModal() { document.getElementById('record-modal').classList.add('hidden'); }
 
     // History Modal Logic
     function showHistoryModal(id) {
