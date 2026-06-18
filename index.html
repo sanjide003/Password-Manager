@@ -530,7 +530,8 @@
   <!-- PURE JS LOGIC (Navigation, Modal, Table Render & Sorting) -->
   <script>
     // Tab Navigation
-    function switchView(viewId) {
+    // പുതുക്കിയ നാവിഗേഷൻ ഫംഗ്ഷൻ (ക്രിയേറ്റ് ചെയ്യുമ്പോൾ ഡാറ്റ ക്ലിയർ ചെയ്യാനും, മെനു ഓട്ടോമാറ്റിക് ആയി ക്ലോസ് ചെയ്യാനും)
+    function switchView(viewId, isEdit = false) {
       document.getElementById('view-create-account').classList.add('hidden');
       document.getElementById('view-all-accounts').classList.add('hidden');
       
@@ -546,8 +547,9 @@
       if(viewId === 'view-create-account') {
         document.getElementById('tab-create').classList.add('bg-indigo-600/10', 'text-indigo-400', 'border-indigo-500/20');
         document.getElementById('tab-create').classList.remove('text-slate-300', 'border-transparent');
-        // Clear inputs for fresh creation
-        if(document.getElementById('form-title').innerText !== "Edit Account") {
+        
+        // ഇത് എഡിറ്റ് മോഡ് അല്ലെങ്കിൽ മാത്രം ഫോം ക്ലിയർ ചെയ്യുക (Unlimited accounts പരിഹാരം)
+        if(!isEdit) {
            clearForm();
         }
       } else {
@@ -555,11 +557,15 @@
         document.getElementById('tab-all').classList.remove('text-slate-300', 'border-transparent');
       }
       
-      if(window.innerWidth < 1024) toggleSidebar();
+      // ടാബ് സെലക്ട് ചെയ്ത ശേഷം സൈഡ് മെനു ഓട്ടോമാറ്റിക് ആയി മറയ്ക്കുക
+      const sidebar = document.getElementById('sidebar');
+      if (!sidebar.classList.contains('-translate-x-full')) {
+        toggleSidebar();
+      }
     }
     
     function clearForm() {
-      document.getElementById('record-id').value = "";
+      document.getElementById('record-id').value = ""; // ഇത് നിർബന്ധമായും ക്ലിയർ ആയിരിക്കണം
       document.getElementById('platform-input').value = "";
       document.getElementById('email-input').value = "";
       document.getElementById('password-input').value = "";
@@ -782,7 +788,9 @@
       document.getElementById('notes-input').value = record.notes || "";
       
       document.getElementById('form-title').innerHTML = `<i class="fas fa-user-edit text-amber-400"></i> <span>Edit Account</span>`;
-      switchView('view-create-account');
+      
+      // True എന്നത് isEdit ഫ്ലാഗ് ആയി പാസ് ചെയ്യുന്നു, അങ്ങനെ പഴയ ഡാറ്റ മാഞ്ഞുപോകാതിരിക്കും
+      switchView('view-create-account', true);
     }
 
     // History Modal Logic
