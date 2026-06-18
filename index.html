@@ -24,7 +24,7 @@
   <!-- TOAST NOTIFICATION SYSTEM -->
   <div id="toast" class="fixed bottom-5 right-5 z-50 transform translate-y-20 opacity-0 transition-all duration-300 bg-emerald-600 text-white px-5 py-3 rounded-xl shadow-2xl flex items-center space-x-3 max-w-sm pointer-events-none">
     <i class="fas fa-check-circle text-lg"></i>
-    <span id="toast-message" class="text-sm font-bold"></span>
+    <span id="toast-message" class="text-sm font-semibold"></span>
   </div>
 
   <!-- CUSTOM DIALOG MODAL (For Alerts and Confirmations) -->
@@ -42,32 +42,57 @@
     </div>
   </div>
 
-  <!-- 1. LOCK / UNLOCK SCREEN (MASTER PASSWORD) -->
-  <div id="lock-screen" class="flex-grow flex items-center justify-center p-4">
+  <!-- 1. AUTHENTICATION SCREEN (LOGIN / SIGN UP) -->
+  <div id="auth-screen" class="flex-grow flex items-center justify-center p-4">
     <div class="w-full max-w-md bg-slate-800 border border-slate-700 rounded-3xl p-8 shadow-2xl text-center">
       <div class="inline-flex p-4 bg-indigo-500/10 rounded-full text-indigo-400 mb-5">
-        <i class="fas fa-shield-halved text-4xl"></i>
+        <i id="auth-icon" class="fas fa-shield-halved text-4xl"></i>
       </div>
-      <h1 class="text-2xl font-bold text-white mb-2">Secure Credential Vault</h1>
-      <p class="text-slate-400 text-sm mb-6 leading-relaxed">
-        Enter your Master Password to unlock your credentials. Keep this password safe as it cannot be recovered.
+      <h1 id="auth-title" class="text-2xl font-bold text-white mb-2">Sign In to Your Vault</h1>
+      <p id="auth-subtitle" class="text-slate-400 text-sm mb-6 leading-relaxed">
+        Access your encrypted credential storage securely. Your password acts as the local decryption key.
       </p>
 
-      <div class="space-y-4">
-        <div class="relative">
-          <input type="password" id="master-password-input" placeholder="Enter Master Password..." 
-            class="w-full bg-slate-900 border border-slate-700 rounded-xl py-3.5 pl-4 pr-12 text-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all placeholder:text-slate-500">
-          <button onclick="togglePasswordVisibility('master-password-input')" class="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300">
-            <i class="fas fa-eye text-sm"></i>
-          </button>
+      <div class="space-y-4 text-left">
+        <!-- Email Input -->
+        <div>
+          <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1.5">Email Address</label>
+          <div class="relative">
+            <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center text-slate-500">
+              <i class="fas fa-envelope text-sm"></i>
+            </span>
+            <input type="email" id="auth-email-input" placeholder="name@example.com" required
+              class="w-full bg-slate-900 border border-slate-700 rounded-xl py-3 pl-10 pr-4 text-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all placeholder:text-slate-500">
+          </div>
         </div>
 
-        <button onclick="unlockVault()" class="w-full bg-indigo-600 hover:bg-indigo-500 active:bg-indigo-700 text-white font-semibold py-3.5 rounded-xl transition duration-150 shadow-lg shadow-indigo-600/20 flex items-center justify-center space-x-2">
-          <span>Unlock Vault</span>
+        <!-- Password Input -->
+        <div>
+          <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1.5">Password</label>
+          <div class="relative">
+            <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center text-slate-500">
+              <i class="fas fa-key text-sm"></i>
+            </span>
+            <input type="password" id="auth-password-input" placeholder="••••••••" required
+              class="w-full bg-slate-900 border border-slate-700 rounded-xl py-3 pl-10 pr-12 text-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all placeholder:text-slate-500">
+            <button onclick="togglePasswordVisibility('auth-password-input')" class="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300">
+              <i class="fas fa-eye text-sm"></i>
+            </button>
+          </div>
+        </div>
+
+        <button onclick="submitAuth()" id="auth-primary-btn" class="w-full mt-2 bg-indigo-600 hover:bg-indigo-500 active:bg-indigo-700 text-white font-semibold py-3.5 rounded-xl transition duration-150 shadow-lg shadow-indigo-600/20 flex items-center justify-center space-x-2">
+          <span>Sign In</span>
           <i class="fas fa-unlock"></i>
         </button>
         
-        <p id="lock-status" class="text-xs text-rose-400 font-bold hidden"></p>
+        <p id="auth-error-status" class="text-xs text-rose-400 font-semibold hidden text-center mt-3"></p>
+        
+        <!-- Toggle Auth mode -->
+        <p class="text-xs text-slate-400 text-center mt-4">
+          <span id="auth-toggle-desc">Don't have an account?</span> 
+          <a href="#" id="auth-toggle-link" onclick="toggleAuthMode(event)" class="text-indigo-400 hover:underline font-semibold">Create Account</a>
+        </p>
       </div>
     </div>
   </div>
@@ -95,8 +120,8 @@
             <i class="fas fa-plus"></i>
             <span>Add Account</span>
           </button>
-          <button onclick="lockVault()" class="bg-slate-700 hover:bg-slate-600 text-slate-200 p-2.5 rounded-xl transition flex items-center justify-center" title="Lock Vault">
-            <i class="fas fa-lock-open text-base"></i>
+          <button onclick="lockVault()" class="bg-slate-700 hover:bg-slate-600 text-slate-200 p-2.5 rounded-xl transition flex items-center justify-center" title="Sign Out">
+            <i class="fas fa-sign-out-alt text-base"></i>
           </button>
         </div>
       </div>
@@ -121,7 +146,7 @@
       <!-- Loading State Spinner -->
       <div id="loading-spinner" class="flex flex-col items-center justify-center py-20">
         <div class="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-indigo-500 mb-4"></div>
-        <p class="text-slate-400 text-sm">Loading your credentials from Firebase...</p>
+        <p class="text-slate-400 text-sm">Decrypting and loading credentials...</p>
       </div>
 
       <!-- No Data State Placeholder -->
@@ -237,7 +262,7 @@
   <!-- Footer -->
   <footer class="bg-slate-950/80 border-t border-slate-800 py-4 mt-auto">
     <div class="max-w-7xl mx-auto px-4 text-center text-xs text-slate-500">
-      Secure Password Vault App &copy; 2026. All data is encrypted locally on your browser before syncing to the cloud.
+      Secure Password Vault App &copy; 2026. All data is locally encrypted before syncing to your private cloud storage.
     </div>
   </footer>
 
@@ -245,7 +270,7 @@
   <script type="module">
     // Firebase imports from v11
     import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-    import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+    import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
     import { getFirestore, doc, setDoc, getDoc, collection, addDoc, updateDoc, deleteDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
     // User's Provided Configuration
@@ -270,30 +295,23 @@
       user: null,
       masterKey: "",
       credentials: [],
-      unsubscribeListener: null
+      unsubscribeListener: null,
+      isSignUpMode: false
     };
 
-    // Initialize Auth (Rule 3)
-    const initAuth = async () => {
-      try {
-        await signInAnonymously(auth);
-      } catch (err) {
-        console.error("Auth error:", err);
-        showToast("Firebase connection failed!", true);
-      }
-    };
-
-    // Set up auth state change listener
+    // ----------------------------------------------------
+    // AUTH STATE LISTENER
+    // ----------------------------------------------------
     onAuthStateChanged(auth, (user) => {
       window.state.user = user;
-      // Start listening to databases if master password has already unlocked
       if (user && window.state.masterKey) {
-        listenToCredentials();
+        proceedToDashboard();
+      } else {
+        // Fallback if not authenticated
+        document.getElementById('auth-screen').classList.remove('hidden');
+        document.getElementById('dashboard-screen').classList.add('hidden');
       }
     });
-
-    // Execute authentication right away
-    initAuth();
 
     // ----------------------------------------------------
     // CRYPTOGRAPHY HELPERS (Local AES Encrypt / Decrypt)
@@ -315,78 +333,147 @@
     };
 
     // ----------------------------------------------------
-    // VAULT UNLOCK & VALIDATION
+    // LOGIN & REGISTER HANDLERS
     // ----------------------------------------------------
-    window.unlockVault = async function() {
-      const passwordInput = document.getElementById('master-password-input');
+    window.toggleAuthMode = function(event) {
+      if (event) event.preventDefault();
+      
+      const title = document.getElementById('auth-title');
+      const subtitle = document.getElementById('auth-subtitle');
+      const button = document.getElementById('auth-primary-btn');
+      const desc = document.getElementById('auth-toggle-desc');
+      const link = document.getElementById('auth-toggle-link');
+      const icon = document.getElementById('auth-icon');
+      const errorStatus = document.getElementById('auth-error-status');
+      
+      errorStatus.classList.add('hidden');
+      window.state.isSignUpMode = !window.state.isSignUpMode;
+
+      if (window.state.isSignUpMode) {
+        title.textContent = "Create Your Vault Account";
+        subtitle.textContent = "Sign up with an email and password. Your password will automatically act as your secure local encryption key.";
+        button.querySelector('span').textContent = "Create Account";
+        button.querySelector('i').className = "fas fa-user-plus";
+        desc.textContent = "Already have an account?";
+        link.textContent = "Sign In";
+        icon.className = "fas fa-user-shield text-4xl";
+      } else {
+        title.textContent = "Sign In to Your Vault";
+        subtitle.textContent = "Access your encrypted credential storage securely. Your password acts as the local decryption key.";
+        button.querySelector('span').textContent = "Sign In";
+        button.querySelector('i').className = "fas fa-unlock";
+        desc.textContent = "Don't have an account?";
+        link.textContent = "Create Account";
+        icon.className = "fas fa-shield-halved text-4xl";
+      }
+    };
+
+    window.submitAuth = async function() {
+      const emailInput = document.getElementById('auth-email-input');
+      const passwordInput = document.getElementById('auth-password-input');
+      const errorStatus = document.getElementById('auth-error-status');
+      
+      const email = emailInput.value.trim();
       const password = passwordInput.value.trim();
-      const statusEl = document.getElementById('lock-status');
 
-      if (!password) {
-        statusEl.textContent = "Please enter your master password!";
-        statusEl.classList.remove('hidden');
+      if (!email || !password) {
+        errorStatus.textContent = "Please fill in all fields.";
+        errorStatus.classList.remove('hidden');
         return;
       }
 
-      if (!window.state.user) {
-        statusEl.textContent = "Firebase authorization is in progress, please wait...";
-        statusEl.classList.remove('hidden');
-        return;
-      }
-
-      statusEl.classList.add('hidden');
+      errorStatus.classList.add('hidden');
+      
+      // Temporarily store the password in state memory as our AES key
       window.state.masterKey = password;
 
-      // Rule 1: Custom Verification path in User's Private Storage
-      const verifyDocRef = doc(db, 'artifacts', appId, 'users', window.state.user.uid, 'config', 'verification');
-      
       try {
-        const verifySnap = await getDoc(verifyDocRef);
-        
-        if (verifySnap.exists()) {
-          // Verification block exists, attempt decryption
-          const encryptedValue = verifySnap.data().value;
-          const decrypted = window.decryptData(encryptedValue, password);
+        if (window.state.isSignUpMode) {
+          // Firebase Sign Up
+          const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+          window.state.user = userCredential.user;
           
-          if (decrypted === "authorized_vault") {
-            // Decryption successful, valid master password
-            proceedToDashboard();
-          } else {
-            // Wrong Master Password
-            statusEl.textContent = "Incorrect master password! Please try again.";
-            statusEl.classList.remove('hidden');
-            window.state.masterKey = "";
-          }
-        } else {
-          // New User Setup: Create the verification block on the fly
+          // Store an encrypted verification document to verify authentication validity locally on future logins
+          const verifyDocRef = doc(db, 'artifacts', appId, 'users', window.state.user.uid, 'config', 'verification');
           const encryptedValue = window.encryptData("authorized_vault", password);
           await setDoc(verifyDocRef, { value: encryptedValue });
-          showToast("Vault initialized with your master password!");
+
+          showToast("Account successfully registered!");
+          proceedToDashboard();
+        } else {
+          // Firebase Sign In
+          const userCredential = await signInWithEmailAndPassword(auth, email, password);
+          window.state.user = userCredential.user;
+
+          // Locally verify decryption using the verification document
+          const verifyDocRef = doc(db, 'artifacts', appId, 'users', window.state.user.uid, 'config', 'verification');
+          const verifySnap = await getDoc(verifyDocRef);
+          
+          if (verifySnap.exists()) {
+            const encryptedValue = verifySnap.data().value;
+            const decrypted = window.decryptData(encryptedValue, password);
+            
+            if (decrypted !== "authorized_vault") {
+              errorStatus.textContent = "Encryption integrity failed. Check your password.";
+              errorStatus.classList.remove('hidden');
+              window.state.masterKey = "";
+              await signOut(auth);
+              return;
+            }
+          } else {
+            // Setup verification back-compatibly if missing
+            const encryptedValue = window.encryptData("authorized_vault", password);
+            await setDoc(verifyDocRef, { value: encryptedValue });
+          }
+
+          showToast("Successfully logged in!");
           proceedToDashboard();
         }
       } catch (err) {
-        console.error("Lock validation error: ", err);
-        statusEl.textContent = "Failed to sync vault. Please try again.";
-        statusEl.classList.remove('hidden');
+        console.error("Auth error:", err);
         window.state.masterKey = "";
+        let friendlyMessage = "Authentication failed. Please verify credentials.";
+        if (err.code === "auth/email-already-in-use") {
+          friendlyMessage = "This email is already registered.";
+        } else if (err.code === "auth/weak-password") {
+          friendlyMessage = "Password should be at least 6 characters.";
+        } else if (err.code === "auth/invalid-credential" || err.code === "auth/wrong-password" || err.code === "auth/user-not-found") {
+          friendlyMessage = "Invalid email or password. Please try again.";
+        } else if (err.code === "auth/invalid-email") {
+          friendlyMessage = "Invalid email format.";
+        }
+        errorStatus.textContent = friendlyMessage;
+        errorStatus.classList.remove('hidden');
       }
     };
 
     function proceedToDashboard() {
-      document.getElementById('lock-screen').classList.add('hidden');
+      document.getElementById('auth-screen').classList.add('hidden');
       document.getElementById('dashboard-screen').classList.remove('hidden');
       listenToCredentials();
     }
 
-    window.lockVault = function() {
-      if (window.state.unsubscribeListener) {
-        window.state.unsubscribeListener();
-        window.state.unsubscribeListener = null;
+    window.lockVault = async function() {
+      try {
+        await signOut(auth);
+        if (window.state.unsubscribeListener) {
+          window.state.unsubscribeListener();
+          window.state.unsubscribeListener = null;
+        }
+        window.state.masterKey = "";
+        window.state.user = null;
+        
+        // Clear input values
+        document.getElementById('auth-email-input').value = "";
+        document.getElementById('auth-password-input').value = "";
+        
+        document.getElementById('auth-screen').classList.remove('hidden');
+        document.getElementById('dashboard-screen').classList.add('hidden');
+        showToast("Logged out successfully.");
+      } catch (err) {
+        console.error("Logout failed:", err);
+        showToast("Error logging out", true);
       }
-      window.state.masterKey = "";
-      document.getElementById('master-password-input').value = "";
-      document.getElementById('lock-screen').classList.remove('hidden');
-      document.getElementById('dashboard-screen').classList.add('hidden');
     };
 
     // ----------------------------------------------------
@@ -398,7 +485,6 @@
       const loadingSpinner = document.getElementById('loading-spinner');
       loadingSpinner.classList.remove('hidden');
 
-      // Rule 1: Private user path for security
       const credentialsCollection = collection(db, 'artifacts', appId, 'users', window.state.user.uid, 'credentials');
 
       // Clear any previous listener
@@ -419,7 +505,7 @@
 
           items.push({
             id: doc.id,
-            platform: data.platform, // Keep company unencrypted for listing
+            platform: data.platform, // Keep company unencrypted for searchability
             email: decryptedEmail,
             password: decryptedPassword,
             phone: decryptedPhone,
@@ -471,12 +557,10 @@
 
       try {
         if (id) {
-          // Rule 1: Specific doc update
           const docRef = doc(db, 'artifacts', appId, 'users', window.state.user.uid, 'credentials', id);
           await updateDoc(docRef, payload);
           showToast("Credentials updated successfully!");
         } else {
-          // Add new record
           payload.createdAt = new Date().toISOString();
           const collRef = collection(db, 'artifacts', appId, 'users', window.state.user.uid, 'credentials');
           await addDoc(collRef, payload);
