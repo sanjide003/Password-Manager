@@ -42,15 +42,40 @@
     </div>
   </div>
 
+  <!-- SIDEBAR (DRAWER MENU) -->
+  <div id="sidebar-overlay" onclick="toggleSidebar()" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 hidden transition-opacity"></div>
+  <aside id="sidebar" class="fixed inset-y-0 left-0 w-64 bg-slate-800 border-r border-slate-700 transform -translate-x-full transition-transform duration-300 z-50 flex flex-col">
+    <div class="p-5 flex justify-between items-center border-b border-slate-700 bg-slate-800">
+      <div class="flex items-center space-x-2 text-indigo-400">
+        <i class="fas fa-shield-alt text-xl"></i>
+        <h2 class="text-lg font-bold text-white">Vault Menu</h2>
+      </div>
+      <button onclick="toggleSidebar()" class="text-slate-400 hover:text-white p-1 rounded-lg transition"><i class="fas fa-times text-lg"></i></button>
+    </div>
+    <nav class="p-4 space-y-3 flex-grow">
+      <button onclick="showAllAccounts()" class="w-full flex items-center gap-3 px-4 py-3.5 bg-indigo-600/10 text-indigo-400 rounded-xl font-semibold transition hover:bg-indigo-600/20 border border-indigo-500/20 shadow-sm">
+        <i class="fas fa-list-ul w-5"></i> All Accounts
+      </button>
+      <button onclick="openAddModalFromSidebar()" class="w-full flex items-center gap-3 px-4 py-3.5 text-slate-300 rounded-xl font-semibold transition hover:bg-slate-700 border border-transparent">
+        <i class="fas fa-user-plus w-5"></i> Create Account
+      </button>
+    </nav>
+    <div class="p-4 border-t border-slate-700 bg-slate-800/50">
+      <button onclick="lockVault()" class="w-full flex items-center gap-3 px-4 py-3.5 text-rose-400 rounded-xl font-semibold transition hover:bg-rose-500/10 border border-transparent">
+        <i class="fas fa-lock w-5"></i> Lock Vault
+      </button>
+    </div>
+  </aside>
+
   <!-- 1. AUTHENTICATION SCREEN (LOGIN / SIGN UP) -->
-  <div id="auth-screen" class="flex-grow flex items-center justify-center p-4">
+  <div id="auth-screen" class="flex-grow flex items-center justify-center p-4 relative z-10">
     <div class="w-full max-w-md bg-slate-800 border border-slate-700 rounded-3xl p-8 shadow-2xl text-center">
       <div class="inline-flex p-4 bg-indigo-500/10 rounded-full text-indigo-400 mb-5">
         <i id="auth-icon" class="fas fa-lock text-4xl"></i>
       </div>
       <h1 id="auth-title" class="text-2xl font-bold text-white mb-2">Unlock Your Vault</h1>
       <p id="auth-subtitle" class="text-slate-400 text-sm mb-6 leading-relaxed">
-        Temporary login mode is active. Please enter the master password to continue.
+        Strict access mode is active. Enter the exact master password to continue.
       </p>
 
       <div class="space-y-4 text-left">
@@ -82,35 +107,39 @@
   <!-- 2. MAIN DASHBOARD (HIDDEN UNTIL UNLOCKED) -->
   <div id="dashboard-screen" class="hidden flex-grow flex flex-col">
     <!-- Navigation Bar -->
-    <header class="bg-slate-800 border-b border-slate-700 sticky top-0 z-40">
+    <header class="bg-slate-800 border-b border-slate-700 sticky top-0 z-30 shadow-sm">
       <div class="max-w-7xl mx-auto px-4 py-4 flex flex-col sm:flex-row justify-between items-center gap-4">
-        <div class="flex items-center space-x-3">
-          <div class="bg-indigo-600 p-2.5 rounded-xl text-white">
-            <i class="fas fa-vault text-xl"></i>
-          </div>
-          <div>
-            <h1 class="text-lg font-bold text-white">Vault Manager</h1>
-            <p class="text-xs text-emerald-400 flex items-center gap-1.5 font-semibold">
-              <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-              Securely Synced
-            </p>
+        <div class="flex items-center space-x-4 w-full sm:w-auto">
+          <!-- Hamburger Icon for Menu -->
+          <button onclick="toggleSidebar()" class="text-slate-300 hover:text-white hover:bg-slate-700 p-2 rounded-xl transition">
+            <i class="fas fa-bars text-xl"></i>
+          </button>
+          
+          <div class="flex items-center space-x-3">
+            <div class="bg-indigo-600 p-2.5 rounded-xl text-white hidden sm:block">
+              <i class="fas fa-vault text-xl"></i>
+            </div>
+            <div>
+              <h1 class="text-lg font-bold text-white">Vault Manager</h1>
+              <p class="text-[11px] text-emerald-400 flex items-center gap-1.5 font-semibold">
+                <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                Securely Synced
+              </p>
+            </div>
           </div>
         </div>
         
-        <div class="flex items-center gap-3 w-full sm:w-auto">
+        <div class="flex items-center gap-3 w-full sm:w-auto justify-end">
           <button onclick="openAddModal()" class="flex-grow sm:flex-grow-0 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold px-5 py-2.5 rounded-xl transition flex items-center justify-center gap-2 text-sm shadow-md">
             <i class="fas fa-plus"></i>
             <span>Add Account</span>
-          </button>
-          <button onclick="lockVault()" class="bg-slate-700 hover:bg-slate-600 text-slate-200 p-2.5 rounded-xl transition flex items-center justify-center" title="Sign Out">
-            <i class="fas fa-sign-out-alt text-base"></i>
           </button>
         </div>
       </div>
     </header>
 
     <!-- Main Content Area -->
-    <main class="max-w-7xl mx-auto px-4 py-6 flex-grow w-full">
+    <main class="max-w-7xl mx-auto px-4 py-6 flex-grow w-full relative z-10">
       <!-- Search & Status Row -->
       <div class="flex flex-col md:flex-row justify-between items-center gap-4 mb-6">
         <div class="relative w-full md:max-w-md">
@@ -118,9 +147,9 @@
             <i class="fas fa-search"></i>
           </span>
           <input type="text" id="search-input" oninput="filterCards()" placeholder="Search by platform or email..." 
-            class="w-full bg-slate-800 border border-slate-700 rounded-xl py-3 pl-10 pr-4 text-sm text-slate-100 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition">
+            class="w-full bg-slate-800 border border-slate-700 rounded-xl py-3 pl-10 pr-4 text-sm text-slate-100 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition shadow-sm">
         </div>
-        <div class="text-xs text-slate-400 self-start md:self-auto font-semibold bg-slate-800 px-4 py-2 rounded-lg border border-slate-700">
+        <div class="text-xs text-slate-400 self-start md:self-auto font-semibold bg-slate-800 px-4 py-2.5 rounded-xl border border-slate-700 shadow-sm">
           Total Saved: <span id="total-count" class="text-indigo-400 font-extrabold text-sm ml-1">0</span>
         </div>
       </div>
@@ -132,7 +161,7 @@
       </div>
 
       <!-- No Data State Placeholder -->
-      <div id="empty-state" class="hidden text-center py-16 border-2 border-dashed border-slate-800 rounded-3xl p-8 max-w-md mx-auto">
+      <div id="empty-state" class="hidden text-center py-16 border-2 border-dashed border-slate-700 bg-slate-800/30 rounded-3xl p-8 max-w-md mx-auto">
         <div class="text-slate-600 text-5xl mb-4">
           <i class="fas fa-folder-open"></i>
         </div>
@@ -140,7 +169,7 @@
         <p class="text-slate-400 text-xs leading-relaxed mb-6">
           Keep your email accounts and passwords secure in one place. Click the button below to add your first login entry.
         </p>
-        <button onclick="openAddModal()" class="inline-flex bg-slate-800 hover:bg-slate-700 border border-slate-600 text-slate-200 font-bold px-4 py-2 rounded-xl text-xs transition items-center gap-1.5">
+        <button onclick="openAddModal()" class="inline-flex bg-slate-800 hover:bg-slate-700 border border-slate-600 text-slate-200 font-bold px-4 py-2 rounded-xl text-xs transition items-center gap-1.5 shadow-sm">
           <i class="fas fa-plus"></i> Add New Entry
         </button>
       </div>
@@ -242,7 +271,7 @@
   </div>
 
   <!-- Footer -->
-  <footer class="bg-slate-950/80 border-t border-slate-800 py-4 mt-auto">
+  <footer class="bg-slate-950/80 border-t border-slate-800 py-4 mt-auto relative z-10">
     <div class="max-w-7xl mx-auto px-4 text-center text-xs text-slate-500">
       Secure Password Vault App &copy; 2026. All data is locally encrypted before syncing to your private cloud storage.
     </div>
@@ -252,7 +281,7 @@
   <script type="module">
     // Firebase imports from v11
     import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-    import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+    import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
     import { getFirestore, doc, setDoc, getDoc, collection, addDoc, updateDoc, deleteDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
     // User's Provided Configuration
@@ -281,6 +310,23 @@
     };
 
     // ----------------------------------------------------
+    // SECURE AUTH INITIALIZATION (Rule 3 Fix for Firestore Save)
+    // ----------------------------------------------------
+    const initAuth = async () => {
+      try {
+        if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+          await signInWithCustomToken(auth, __initial_auth_token);
+        } else {
+          await signInAnonymously(auth);
+        }
+      } catch (err) {
+        console.error("Auth initialization failed:", err);
+      }
+    };
+
+    initAuth();
+
+    // ----------------------------------------------------
     // AUTH STATE LISTENER
     // ----------------------------------------------------
     onAuthStateChanged(auth, (user) => {
@@ -288,14 +334,11 @@
       if (user && window.state.masterKey === 'dsd003') {
         proceedToDashboard();
       } else {
-        // Fallback if not authenticated or locked
+        // Enforce lock screen if not authenticated properly
         document.getElementById('auth-screen').classList.remove('hidden');
         document.getElementById('dashboard-screen').classList.add('hidden');
       }
     });
-
-    // Sign in anonymously immediately so Firestore access is ready
-    signInAnonymously(auth).catch(console.error);
 
     // ----------------------------------------------------
     // CRYPTOGRAPHY HELPERS (Local AES Encrypt / Decrypt)
@@ -317,13 +360,13 @@
     };
 
     // ----------------------------------------------------
-    // LOGIN & UNLOCK HANDLERS
+    // LOGIN & UNLOCK HANDLERS (Strict Enforce 'dsd003')
     // ----------------------------------------------------
     window.submitAuth = async function() {
       const passwordInput = document.getElementById('auth-password-input');
       const errorStatus = document.getElementById('auth-error-status');
       
-      const password = passwordInput.value.trim();
+      const password = passwordInput.value;
 
       if (!password) {
         errorStatus.textContent = "Please enter the password.";
@@ -331,27 +374,25 @@
         return;
       }
 
+      // STRICT CHECK: Reject anything that isn't exactly 'dsd003'
       if (password !== 'dsd003') {
         errorStatus.textContent = "Incorrect password. Access denied.";
         errorStatus.classList.remove('hidden');
+        passwordInput.value = ""; // Clear input for security
         return;
       }
 
       errorStatus.classList.add('hidden');
       window.state.masterKey = password;
 
-      if (!window.state.user) {
-        try {
-          await signInAnonymously(auth);
-        } catch (err) {
-          errorStatus.textContent = "Database connection failed.";
-          errorStatus.classList.remove('hidden');
-          return;
-        }
+      // If user session is ready from initAuth(), proceed. Otherwise wait.
+      if (window.state.user) {
+        showToast("Vault Unlocked Successfully!");
+        proceedToDashboard();
+      } else {
+        showToast("Connecting securely to database... Please wait.", false);
+        // It will auto-proceed once onAuthStateChanged fires.
       }
-
-      showToast("Vault Unlocked!");
-      proceedToDashboard();
     };
 
     function proceedToDashboard() {
@@ -361,18 +402,24 @@
     }
 
     window.lockVault = async function() {
+      // Close sidebar if open
+      const sidebar = document.getElementById('sidebar');
+      if (!sidebar.classList.contains('-translate-x-full')) {
+        toggleSidebar();
+      }
+
       if (window.state.unsubscribeListener) {
         window.state.unsubscribeListener();
         window.state.unsubscribeListener = null;
       }
-      window.state.masterKey = "";
+      window.state.masterKey = ""; // Wipe key from memory
       
-      // Clear input values
+      // Clear input values securely
       document.getElementById('auth-password-input').value = "";
       
       document.getElementById('auth-screen').classList.remove('hidden');
       document.getElementById('dashboard-screen').classList.add('hidden');
-      showToast("Vault Locked.");
+      showToast("Vault Locked Securely.");
     };
 
     // ----------------------------------------------------
@@ -396,7 +443,7 @@
         const items = [];
         snapshot.forEach((doc) => {
           const data = doc.data();
-          // Decrypt fields locally (Rule 2: Fetch all, then processing done locally)
+          // Decrypt fields locally
           const decryptedEmail = window.decryptData(data.email, window.state.masterKey);
           const decryptedPassword = window.decryptData(data.password, window.state.masterKey);
           const decryptedPhone = window.decryptData(data.phone, window.state.masterKey);
@@ -413,6 +460,9 @@
           });
         });
 
+        // Sort items newest first
+        items.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+        
         window.state.credentials = items;
         renderCards();
         loadingSpinner.classList.add('hidden');
@@ -423,10 +473,16 @@
       });
     }
 
-    // Save or Update Record
+    // Save or Update Record (FIXED: Now properly saves using user session)
     window.saveRecord = async function(event) {
       event.preventDefault();
       
+      // Strict guard
+      if (!window.state.user || !window.state.masterKey) {
+        showToast("Session invalid! Please relogin.", true);
+        return;
+      }
+
       const id = document.getElementById('record-id').value;
       const platform = document.getElementById('platform-input').value.trim();
       const email = document.getElementById('email-input').value.trim();
@@ -446,7 +502,7 @@
       const encryptedNotes = window.encryptData(notes, window.state.masterKey);
 
       const payload = {
-        platform: platform, // Stored cleartext so you can search through platforms easily
+        platform: platform, 
         email: encryptedEmail,
         password: encryptedPassword,
         phone: encryptedPhone,
@@ -463,17 +519,19 @@
           payload.createdAt = new Date().toISOString();
           const collRef = collection(db, 'artifacts', appId, 'users', window.state.user.uid, 'credentials');
           await addDoc(collRef, payload);
-          showToast("Credentials successfully saved to vault!");
+          showToast("New Account successfully saved to Vault!");
         }
         closeRecordModal();
       } catch (err) {
         console.error("Save failed: ", err);
-        showToast("Could not save credentials!", true);
+        showToast("Could not save to database! Permission error.", true);
       }
     };
 
     // Delete Record
     window.deleteRecord = async function(id, platformName) {
+      if (!window.state.user) return;
+      
       showCustomConfirm(
         "Are you sure you want to delete this?",
         `The email and password associated with '${platformName}' will be permanently deleted. This action cannot be undone.`,
@@ -494,6 +552,28 @@
 
   <!-- INTERACTIVE SYSTEM SCRIPT (Pure JS Logic) -->
   <script>
+    // --- SIDEBAR LOGIC ---
+    function toggleSidebar() {
+      const sidebar = document.getElementById('sidebar');
+      const overlay = document.getElementById('sidebar-overlay');
+      
+      sidebar.classList.toggle('-translate-x-full');
+      overlay.classList.toggle('hidden');
+    }
+
+    function showAllAccounts() {
+      toggleSidebar();
+      // Ensure search is clear and display all
+      document.getElementById('search-input').value = "";
+      filterCards();
+    }
+
+    function openAddModalFromSidebar() {
+      toggleSidebar();
+      openAddModal();
+    }
+
+    // --- UI HELPERS ---
     // Show Toast Pop-ups
     function showToast(message, isError = false) {
       const toast = document.getElementById('toast');
@@ -518,7 +598,7 @@
       }, 3500);
     }
 
-    // Custom Dialog Manager (No Browser Alerts Allowed)
+    // Custom Dialog Manager
     let currentConfirmCallback = null;
     function showCustomConfirm(title, message, callback) {
       const modal = document.getElementById('confirm-modal');
@@ -557,7 +637,7 @@
       }
     }
 
-    // Copy Content safely (IFrame Compatibility with Textarea fallback)
+    // Copy Content safely
     function copyToClipboard(text, fieldName) {
       const tempTextArea = document.createElement("textarea");
       tempTextArea.value = text;
@@ -586,7 +666,7 @@
       const items = window.state.credentials;
       totalCountSpan.textContent = items.length;
 
-      // Filter local state based on query (Rule 2 logic)
+      // Filter local state based on query
       const filtered = items.filter(item => {
         const query = filterQuery.toLowerCase();
         return item.platform.toLowerCase().includes(query) || 
