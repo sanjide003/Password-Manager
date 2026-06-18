@@ -46,29 +46,17 @@
   <div id="auth-screen" class="flex-grow flex items-center justify-center p-4">
     <div class="w-full max-w-md bg-slate-800 border border-slate-700 rounded-3xl p-8 shadow-2xl text-center">
       <div class="inline-flex p-4 bg-indigo-500/10 rounded-full text-indigo-400 mb-5">
-        <i id="auth-icon" class="fas fa-shield-halved text-4xl"></i>
+        <i id="auth-icon" class="fas fa-lock text-4xl"></i>
       </div>
-      <h1 id="auth-title" class="text-2xl font-bold text-white mb-2">Sign In to Your Vault</h1>
+      <h1 id="auth-title" class="text-2xl font-bold text-white mb-2">Unlock Your Vault</h1>
       <p id="auth-subtitle" class="text-slate-400 text-sm mb-6 leading-relaxed">
-        Access your encrypted credential storage securely. Your password acts as the local decryption key.
+        Temporary login mode is active. Please enter the master password to continue.
       </p>
 
       <div class="space-y-4 text-left">
-        <!-- Email Input -->
-        <div>
-          <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1.5">Email Address</label>
-          <div class="relative">
-            <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center text-slate-500">
-              <i class="fas fa-envelope text-sm"></i>
-            </span>
-            <input type="email" id="auth-email-input" placeholder="name@example.com" required
-              class="w-full bg-slate-900 border border-slate-700 rounded-xl py-3 pl-10 pr-4 text-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all placeholder:text-slate-500">
-          </div>
-        </div>
-
         <!-- Password Input -->
         <div>
-          <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1.5">Password</label>
+          <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1.5">Master Password</label>
           <div class="relative">
             <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center text-slate-500">
               <i class="fas fa-key text-sm"></i>
@@ -82,17 +70,11 @@
         </div>
 
         <button onclick="submitAuth()" id="auth-primary-btn" class="w-full mt-2 bg-indigo-600 hover:bg-indigo-500 active:bg-indigo-700 text-white font-semibold py-3.5 rounded-xl transition duration-150 shadow-lg shadow-indigo-600/20 flex items-center justify-center space-x-2">
-          <span>Sign In</span>
+          <span>Unlock Vault</span>
           <i class="fas fa-unlock"></i>
         </button>
         
         <p id="auth-error-status" class="text-xs text-rose-400 font-semibold hidden text-center mt-3"></p>
-        
-        <!-- Toggle Auth mode -->
-        <p class="text-xs text-slate-400 text-center mt-4">
-          <span id="auth-toggle-desc">Don't have an account?</span> 
-          <a href="#" id="auth-toggle-link" onclick="toggleAuthMode(event)" class="text-indigo-400 hover:underline font-semibold">Create Account</a>
-        </p>
       </div>
     </div>
   </div>
@@ -270,7 +252,7 @@
   <script type="module">
     // Firebase imports from v11
     import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-    import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+    import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
     import { getFirestore, doc, setDoc, getDoc, collection, addDoc, updateDoc, deleteDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
     // User's Provided Configuration
@@ -295,8 +277,7 @@
       user: null,
       masterKey: "",
       credentials: [],
-      unsubscribeListener: null,
-      isSignUpMode: false
+      unsubscribeListener: null
     };
 
     // ----------------------------------------------------
@@ -304,14 +285,17 @@
     // ----------------------------------------------------
     onAuthStateChanged(auth, (user) => {
       window.state.user = user;
-      if (user && window.state.masterKey) {
+      if (user && window.state.masterKey === 'dsd003') {
         proceedToDashboard();
       } else {
-        // Fallback if not authenticated
+        // Fallback if not authenticated or locked
         document.getElementById('auth-screen').classList.remove('hidden');
         document.getElementById('dashboard-screen').classList.add('hidden');
       }
     });
+
+    // Sign in anonymously immediately so Firestore access is ready
+    signInAnonymously(auth).catch(console.error);
 
     // ----------------------------------------------------
     // CRYPTOGRAPHY HELPERS (Local AES Encrypt / Decrypt)
@@ -333,118 +317,41 @@
     };
 
     // ----------------------------------------------------
-    // LOGIN & REGISTER HANDLERS
+    // LOGIN & UNLOCK HANDLERS
     // ----------------------------------------------------
-    window.toggleAuthMode = function(event) {
-      if (event) event.preventDefault();
-      
-      const title = document.getElementById('auth-title');
-      const subtitle = document.getElementById('auth-subtitle');
-      const button = document.getElementById('auth-primary-btn');
-      const desc = document.getElementById('auth-toggle-desc');
-      const link = document.getElementById('auth-toggle-link');
-      const icon = document.getElementById('auth-icon');
-      const errorStatus = document.getElementById('auth-error-status');
-      
-      errorStatus.classList.add('hidden');
-      window.state.isSignUpMode = !window.state.isSignUpMode;
-
-      if (window.state.isSignUpMode) {
-        title.textContent = "Create Your Vault Account";
-        subtitle.textContent = "Sign up with an email and password. Your password will automatically act as your secure local encryption key.";
-        button.querySelector('span').textContent = "Create Account";
-        button.querySelector('i').className = "fas fa-user-plus";
-        desc.textContent = "Already have an account?";
-        link.textContent = "Sign In";
-        icon.className = "fas fa-user-shield text-4xl";
-      } else {
-        title.textContent = "Sign In to Your Vault";
-        subtitle.textContent = "Access your encrypted credential storage securely. Your password acts as the local decryption key.";
-        button.querySelector('span').textContent = "Sign In";
-        button.querySelector('i').className = "fas fa-unlock";
-        desc.textContent = "Don't have an account?";
-        link.textContent = "Create Account";
-        icon.className = "fas fa-shield-halved text-4xl";
-      }
-    };
-
     window.submitAuth = async function() {
-      const emailInput = document.getElementById('auth-email-input');
       const passwordInput = document.getElementById('auth-password-input');
       const errorStatus = document.getElementById('auth-error-status');
       
-      const email = emailInput.value.trim();
       const password = passwordInput.value.trim();
 
-      if (!email || !password) {
-        errorStatus.textContent = "Please fill in all fields.";
+      if (!password) {
+        errorStatus.textContent = "Please enter the password.";
+        errorStatus.classList.remove('hidden');
+        return;
+      }
+
+      if (password !== 'dsd003') {
+        errorStatus.textContent = "Incorrect password. Access denied.";
         errorStatus.classList.remove('hidden');
         return;
       }
 
       errorStatus.classList.add('hidden');
-      
-      // Temporarily store the password in state memory as our AES key
       window.state.masterKey = password;
 
-      try {
-        if (window.state.isSignUpMode) {
-          // Firebase Sign Up
-          const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-          window.state.user = userCredential.user;
-          
-          // Store an encrypted verification document to verify authentication validity locally on future logins
-          const verifyDocRef = doc(db, 'artifacts', appId, 'users', window.state.user.uid, 'config', 'verification');
-          const encryptedValue = window.encryptData("authorized_vault", password);
-          await setDoc(verifyDocRef, { value: encryptedValue });
-
-          showToast("Account successfully registered!");
-          proceedToDashboard();
-        } else {
-          // Firebase Sign In
-          const userCredential = await signInWithEmailAndPassword(auth, email, password);
-          window.state.user = userCredential.user;
-
-          // Locally verify decryption using the verification document
-          const verifyDocRef = doc(db, 'artifacts', appId, 'users', window.state.user.uid, 'config', 'verification');
-          const verifySnap = await getDoc(verifyDocRef);
-          
-          if (verifySnap.exists()) {
-            const encryptedValue = verifySnap.data().value;
-            const decrypted = window.decryptData(encryptedValue, password);
-            
-            if (decrypted !== "authorized_vault") {
-              errorStatus.textContent = "Encryption integrity failed. Check your password.";
-              errorStatus.classList.remove('hidden');
-              window.state.masterKey = "";
-              await signOut(auth);
-              return;
-            }
-          } else {
-            // Setup verification back-compatibly if missing
-            const encryptedValue = window.encryptData("authorized_vault", password);
-            await setDoc(verifyDocRef, { value: encryptedValue });
-          }
-
-          showToast("Successfully logged in!");
-          proceedToDashboard();
+      if (!window.state.user) {
+        try {
+          await signInAnonymously(auth);
+        } catch (err) {
+          errorStatus.textContent = "Database connection failed.";
+          errorStatus.classList.remove('hidden');
+          return;
         }
-      } catch (err) {
-        console.error("Auth error:", err);
-        window.state.masterKey = "";
-        let friendlyMessage = "Authentication failed. Please verify credentials.";
-        if (err.code === "auth/email-already-in-use") {
-          friendlyMessage = "This email is already registered.";
-        } else if (err.code === "auth/weak-password") {
-          friendlyMessage = "Password should be at least 6 characters.";
-        } else if (err.code === "auth/invalid-credential" || err.code === "auth/wrong-password" || err.code === "auth/user-not-found") {
-          friendlyMessage = "Invalid email or password. Please try again.";
-        } else if (err.code === "auth/invalid-email") {
-          friendlyMessage = "Invalid email format.";
-        }
-        errorStatus.textContent = friendlyMessage;
-        errorStatus.classList.remove('hidden');
       }
+
+      showToast("Vault Unlocked!");
+      proceedToDashboard();
     };
 
     function proceedToDashboard() {
@@ -454,26 +361,18 @@
     }
 
     window.lockVault = async function() {
-      try {
-        await signOut(auth);
-        if (window.state.unsubscribeListener) {
-          window.state.unsubscribeListener();
-          window.state.unsubscribeListener = null;
-        }
-        window.state.masterKey = "";
-        window.state.user = null;
-        
-        // Clear input values
-        document.getElementById('auth-email-input').value = "";
-        document.getElementById('auth-password-input').value = "";
-        
-        document.getElementById('auth-screen').classList.remove('hidden');
-        document.getElementById('dashboard-screen').classList.add('hidden');
-        showToast("Logged out successfully.");
-      } catch (err) {
-        console.error("Logout failed:", err);
-        showToast("Error logging out", true);
+      if (window.state.unsubscribeListener) {
+        window.state.unsubscribeListener();
+        window.state.unsubscribeListener = null;
       }
+      window.state.masterKey = "";
+      
+      // Clear input values
+      document.getElementById('auth-password-input').value = "";
+      
+      document.getElementById('auth-screen').classList.remove('hidden');
+      document.getElementById('dashboard-screen').classList.add('hidden');
+      showToast("Vault Locked.");
     };
 
     // ----------------------------------------------------
