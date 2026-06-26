@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="ml">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lakfa Business Manager - Login</title>
+    <!-- Tailwind CSS for UI styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 flex items-center justify-center h-screen font-sans">
+
+    <div class="bg-white p-8 rounded-lg shadow-md w-full max-w-md">
+        <div class="text-center mb-8">
+            <h1 class="text-3xl font-bold text-blue-600">LAKFA</h1>
+            <p class="text-gray-500 mt-2">Business Manager Portal</p>
+        </div>
+
+        <form id="login-form" class="space-y-6">
+            <div>
+                <label for="email" class="block text-sm font-medium text-gray-700">ഇമെയിൽ (Email)</label>
+                <input type="email" id="email" required class="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500">
+            </div>
+
+            <div>
+                <label for="password" class="block text-sm font-medium text-gray-700">പാസ്‌വേഡ് (Password)</label>
+                <input type="password" id="password" required class="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500">
+            </div>
+
+            <div id="error-message" class="text-red-500 text-sm hidden">
+                ലോഗിൻ പരാജയപ്പെട്ടു. ഇമെയിലും പാസ്‌വേഡും പരിശോധിക്കുക.
+            </div>
+
+            <button type="submit" id="login-btn" class="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                ലോഗിൻ ചെയ്യുക
+            </button>
+        </form>
+    </div>
+
+    <!-- Firebase SDKs (Modular V9) -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+        import { getAuth, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+        import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+        // നിങ്ങളുടെ firebase-config.js ലെ വിവരങ്ങൾ ഇവിടെ നൽകുക
+        const firebaseConfig = {
+            apiKey: "YOUR_API_KEY",
+            authDomain: "YOUR_AUTH_DOMAIN",
+            projectId: "YOUR_PROJECT_ID",
+            storageBucket: "YOUR_STORAGE_BUCKET",
+            messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
+            appId: "YOUR_APP_ID"
+        };
+
+        // Initialize Firebase
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+
+        const loginForm = document.getElementById('login-form');
+        const loginBtn = document.getElementById('login-btn');
+        const errorMessage = document.getElementById('error-message');
+
+        loginForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            
+            loginBtn.textContent = "Checking...";
+            loginBtn.disabled = true;
+            errorMessage.classList.add('hidden');
+
+            try {
+                // 1. Firebase Authentication
+                const userCredential = await signInWithEmailAndPassword(auth, email, password);
+                const user = userCredential.user;
+
+                // 2. Fetch user role from Firestore 'users' collection
+                const userDocRef = doc(db, "users", user.uid);
+                const userDocSnap = await getDoc(userDocRef);
+
+                if (userDocSnap.exists()) {
+                    const userData = userDocSnap.data();
+                    
+                    // 3. Role Based Routing
+                    if (userData.role === 'manager') {
+                        window.location.href = 'manager.html';
+                    } else if (userData.role === 'investor') {
+                        window.location.href = 'investor.html';
+                    } else {
+                        throw new Error("അക്കൗണ്ടിന് റോൾ നൽകിയിട്ടില്ല");
+                    }
+                } else {
+                     throw new Error("ഡാറ്റാബേസിൽ യൂസറെ കണ്ടെത്താനായില്ല");
+                }
+
+            } catch (error) {
+                console.error("Login Error:", error);
+                errorMessage.classList.remove('hidden');
+                errorMessage.textContent = error.message.includes("auth/") 
+                    ? "തെറ്റായ ഇമെയിൽ അല്ലെങ്കിൽ പാസ്‌വേഡ്." 
+                    : error.message;
+            } finally {
+                loginBtn.textContent = "ലോഗിൻ ചെയ്യുക";
+                loginBtn.disabled = false;
+            }
+        });
+    </script>
+</body>
+</html>
