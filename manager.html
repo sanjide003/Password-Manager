@@ -1,0 +1,450 @@
+<!DOCTYPE html>
+<html lang="ml">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lakfa Manager Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        body { font-family: 'Inter', sans-serif; }
+        .modal { transition: opacity 0.25s ease; }
+        body.modal-active { overflow-x: hidden; overflow-y: hidden !important; }
+    </style>
+</head>
+<body class="bg-gray-50 text-gray-800">
+
+    <nav class="bg-blue-700 shadow-lg">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16">
+                <div class="flex items-center">
+                    <h1 class="text-white text-2xl font-bold tracking-wider">LAKFA</h1>
+                    <span class="ml-3 px-3 py-1 bg-blue-800 text-blue-100 text-xs rounded-full">Manager Portal</span>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <span id="admin-email" class="text-blue-100 text-sm hidden md:block">loading...</span>
+                    <button id="logout-btn" class="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-md text-sm font-medium transition duration-150 ease-in-out">
+                        <i class="fas fa-sign-out-alt mr-2"></i>ലോഗൗട്ട് (Logout)
+                    </button>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        
+        <!-- Stats Row -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+            <div class="bg-white rounded-xl shadow-sm p-6 border border-gray-100 flex items-center">
+                <div class="p-4 rounded-full bg-blue-100 text-blue-600 mr-4">
+                    <i class="fas fa-users text-2xl"></i>
+                </div>
+                <div>
+                    <p class="text-sm text-gray-500 font-medium">ആകെ നിക്ഷേപകർ (Total Investors)</p>
+                    <h3 id="stat-investors" class="text-2xl font-bold text-gray-900">0</h3>
+                </div>
+            </div>
+            <div class="bg-white rounded-xl shadow-sm p-6 border border-gray-100 flex items-center">
+                <div class="p-4 rounded-full bg-green-100 text-green-600 mr-4">
+                    <i class="fas fa-wallet text-2xl"></i>
+                </div>
+                <div>
+                    <p class="text-sm text-gray-500 font-medium">ആകെ നിക്ഷേപം (Total Capital)</p>
+                    <h3 id="stat-capital" class="text-2xl font-bold text-gray-900">₹0</h3>
+                </div>
+            </div>
+            <div class="bg-white rounded-xl shadow-sm p-6 border border-gray-100 flex items-center">
+                <div class="p-4 rounded-full bg-purple-100 text-purple-600 mr-4">
+                    <i class="fas fa-chart-line text-2xl"></i>
+                </div>
+                <div>
+                    <p class="text-sm text-gray-500 font-medium">നിലവിലെ മൂല്യം (Current Value)</p>
+                    <h3 id="stat-current" class="text-2xl font-bold text-gray-900">₹0</h3>
+                </div>
+            </div>
+        </div>
+
+        <!-- Action Bar & Table -->
+        <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+            <div class="p-6 border-b border-gray-100 flex flex-col md:flex-row justify-between items-center gap-4">
+                <h2 class="text-lg font-semibold text-gray-800">നിക്ഷേപകരുടെ വിവരങ്ങൾ (Investors List)</h2>
+                <button onclick="openModal('add-investor-modal')" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-md text-sm font-medium flex items-center transition">
+                    <i class="fas fa-plus mr-2"></i> പുതിയ നിക്ഷേപകൻ (Add Investor)
+                </button>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="bg-gray-50 text-gray-600 text-sm uppercase tracking-wider">
+                            <th class="p-4 font-medium">പേര് & ഇമെയിൽ</th>
+                            <th class="p-4 font-medium">നിക്ഷേപിച്ച തുക (Principal)</th>
+                            <th class="p-4 font-medium">ഇപ്പോഴത്തെ മൂല്യം (Current)</th>
+                            <th class="p-4 font-medium">സ്റ്റാറ്റസ്</th>
+                            <th class="p-4 font-medium text-right">ആക്ഷൻ (Actions)</th>
+                        </tr>
+                    </thead>
+                    <tbody id="investors-table-body" class="divide-y divide-gray-100">
+                        <!-- Data will be populated here via JavaScript -->
+                        <tr>
+                            <td colspan="5" class="p-8 text-center text-gray-500">
+                                <i class="fas fa-spinner fa-spin mr-2"></i> ഡാറ്റ ലോഡ് ചെയ്യുന്നു... (Loading...)
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </main>
+
+    <!-- Modal: Add Investor -->
+    <div id="add-investor-modal" class="modal hidden fixed w-full h-full top-0 left-0 flex items-center justify-center z-50">
+        <div class="modal-overlay absolute w-full h-full bg-gray-900 opacity-50" onclick="closeModal('add-investor-modal')"></div>
+        <div class="modal-container bg-white w-11/12 md:max-w-md mx-auto rounded shadow-lg z-50 overflow-y-auto">
+            <div class="modal-content py-4 text-left px-6">
+                <div class="flex justify-between items-center pb-3 border-b">
+                    <p class="text-xl font-bold">പുതിയ നിക്ഷേപകൻ (Add Investor)</p>
+                    <div class="cursor-pointer z-50" onclick="closeModal('add-investor-modal')">
+                        <i class="fas fa-times text-gray-500 hover:text-gray-800"></i>
+                    </div>
+                </div>
+                <form id="add-investor-form" class="pt-4 space-y-4">
+                    <div>
+                        <label class="block text-sm text-gray-700 font-medium">പേര് (Name)</label>
+                        <input type="text" id="inv-name" required class="mt-1 w-full p-2 border border-gray-300 rounded focus:ring-blue-500 focus:border-blue-500">
+                    </div>
+                    <div>
+                        <label class="block text-sm text-gray-700 font-medium">ഇമെയിൽ (Email) - ഇതാണ് ലോഗിൻ ഐഡി</label>
+                        <input type="email" id="inv-email" required class="mt-1 w-full p-2 border border-gray-300 rounded focus:ring-blue-500 focus:border-blue-500">
+                    </div>
+                    <div>
+                        <label class="block text-sm text-gray-700 font-medium">നിക്ഷേപിക്കുന്ന തുക (₹)</label>
+                        <input type="number" id="inv-amount" required class="mt-1 w-full p-2 border border-gray-300 rounded focus:ring-blue-500 focus:border-blue-500">
+                    </div>
+                    <div class="flex justify-end pt-4 space-x-2">
+                        <button type="button" onclick="closeModal('add-investor-modal')" class="px-4 py-2 bg-gray-200 text-gray-800 rounded hover:bg-gray-300">ക്യാൻസൽ</button>
+                        <button type="submit" id="btn-save-investor" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">സേവ് ചെയ്യുക</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Add Dividend -->
+    <div id="add-dividend-modal" class="modal hidden fixed w-full h-full top-0 left-0 flex items-center justify-center z-50">
+        <div class="modal-overlay absolute w-full h-full bg-gray-900 opacity-50" onclick="closeModal('add-dividend-modal')"></div>
+        <div class="modal-container bg-white w-11/12 md:max-w-md mx-auto rounded shadow-lg z-50 overflow-y-auto">
+            <div class="modal-content py-4 text-left px-6">
+                <div class="flex justify-between items-center pb-3 border-b">
+                    <p class="text-xl font-bold">ലാഭവിഹിതം നൽകുക (Add Dividend)</p>
+                    <div class="cursor-pointer z-50" onclick="closeModal('add-dividend-modal')">
+                        <i class="fas fa-times text-gray-500 hover:text-gray-800"></i>
+                    </div>
+                </div>
+                <form id="add-dividend-form" class="pt-4 space-y-4">
+                    <input type="hidden" id="div-investor-id">
+                    <div>
+                        <label class="block text-sm text-gray-700 font-medium">നിക്ഷേപകൻ (Investor)</label>
+                        <input type="text" id="div-investor-name" disabled class="mt-1 w-full p-2 bg-gray-100 border border-gray-300 rounded text-gray-600">
+                    </div>
+                    <div>
+                        <label class="block text-sm text-gray-700 font-medium">ലാഭവിഹിത തുക (Dividend Amount ₹)</label>
+                        <input type="number" id="div-amount" required class="mt-1 w-full p-2 border border-gray-300 rounded focus:ring-green-500 focus:border-green-500">
+                    </div>
+                    <div>
+                        <label class="block text-sm text-gray-700 font-medium">വിവരണം (Description)</label>
+                        <input type="text" id="div-desc" placeholder="ഉദാ: 2026 ജൂൺ ലാഭവിഹിതം" required class="mt-1 w-full p-2 border border-gray-300 rounded focus:ring-green-500 focus:border-green-500">
+                    </div>
+                    <div class="flex justify-end pt-4 space-x-2">
+                        <button type="button" onclick="closeModal('add-dividend-modal')" class="px-4 py-2 bg-gray-200 text-gray-800 rounded hover:bg-gray-300">ക്യാൻസൽ</button>
+                        <button type="submit" id="btn-save-dividend" class="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700">ലാഭം ചേർക്കുക</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Generic Message -->
+    <div id="message-modal" class="modal hidden fixed w-full h-full top-0 left-0 flex items-center justify-center z-50">
+        <div class="modal-overlay absolute w-full h-full bg-gray-900 opacity-50"></div>
+        <div class="modal-container bg-white w-11/12 md:max-w-sm mx-auto rounded shadow-lg z-50">
+            <div class="modal-content py-6 text-center px-6">
+                <i id="msg-icon" class="fas fa-check-circle text-4xl mb-4 text-green-500"></i>
+                <h3 id="msg-title" class="text-lg font-bold mb-2">Success</h3>
+                <p id="msg-text" class="text-gray-600 mb-6">ഓപ്പറേഷൻ വിജയകരം.</p>
+                <button onclick="closeModal('message-modal')" class="px-6 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 w-full">OK</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Firebase SDKs -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, getDoc, setDoc, addDoc, collection, getDocs, updateDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // നിങ്ങളുടെ firebase-config.js ലെ വിവരങ്ങൾ ഇവിടെ നൽകുക
+        const firebaseConfig = {
+            apiKey: "YOUR_API_KEY",
+            authDomain: "YOUR_AUTH_DOMAIN",
+            projectId: "YOUR_PROJECT_ID",
+            storageBucket: "YOUR_STORAGE_BUCKET",
+            messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
+            appId: "YOUR_APP_ID"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+
+        // Global state to hold users and investments for easy access
+        let investorsData = [];
+
+        // UI Functions
+        window.openModal = function(modalId) {
+            document.getElementById(modalId).classList.remove('hidden');
+            document.body.classList.add('modal-active');
+        }
+
+        window.closeModal = function(modalId) {
+            document.getElementById(modalId).classList.add('hidden');
+            document.body.classList.remove('modal-active');
+            if(modalId === 'add-investor-modal') document.getElementById('add-investor-form').reset();
+            if(modalId === 'add-dividend-modal') document.getElementById('add-dividend-form').reset();
+        }
+
+        function showMessage(title, text, type = 'success') {
+            document.getElementById('msg-title').innerText = title;
+            document.getElementById('msg-text').innerText = text;
+            const icon = document.getElementById('msg-icon');
+            if(type === 'success') {
+                icon.className = "fas fa-check-circle text-4xl mb-4 text-green-500";
+            } else {
+                icon.className = "fas fa-exclamation-triangle text-4xl mb-4 text-red-500";
+            }
+            openModal('message-modal');
+        }
+
+        // 1. Auth Guard - Check if manager is logged in
+        onAuthStateChanged(auth, async (user) => {
+            if (user) {
+                try {
+                    const userDoc = await getDoc(doc(db, "users", user.uid));
+                    if (userDoc.exists() && userDoc.data().role === 'manager') {
+                        document.getElementById('admin-email').innerText = user.email;
+                        loadDashboardData(); // Load data if valid manager
+                    } else {
+                        // Log out if not a manager
+                        await signOut(auth);
+                        window.location.href = 'index.html';
+                    }
+                } catch (error) {
+                    console.error("Auth check failed:", error);
+                    window.location.href = 'index.html';
+                }
+            } else {
+                window.location.href = 'index.html';
+            }
+        });
+
+        // Logout
+        document.getElementById('logout-btn').addEventListener('click', () => {
+            signOut(auth).then(() => {
+                window.location.href = 'index.html';
+            });
+        });
+
+        // 2. Fetch Data and Populate Dashboard
+        async function loadDashboardData() {
+            try {
+                // Fetch all users (Filtering done in memory to avoid complex Firebase indexes for MVP)
+                const usersSnapshot = await getDocs(collection(db, "users"));
+                const investmentsSnapshot = await getDocs(collection(db, "investments"));
+                
+                let totalCapital = 0;
+                let totalCurrentValue = 0;
+                let investorCount = 0;
+                investorsData = [];
+
+                // Map investments by investorId for easy lookup
+                const investmentsMap = {};
+                investmentsSnapshot.forEach(docSnap => {
+                    const data = docSnap.data();
+                    investmentsMap[data.investorId] = { id: docSnap.id, ...data };
+                });
+
+                const tbody = document.getElementById('investors-table-body');
+                tbody.innerHTML = ''; // clear loading state
+
+                usersSnapshot.forEach(docSnap => {
+                    const userData = docSnap.data();
+                    if (userData.role === 'investor') {
+                        investorCount++;
+                        const invId = docSnap.id;
+                        const investment = investmentsMap[invId] || { principalAmount: 0, currentValue: 0, status: 'N/A' };
+                        
+                        totalCapital += Number(investment.principalAmount);
+                        totalCurrentValue += Number(investment.currentValue);
+
+                        // Save to memory for modal use
+                        investorsData.push({
+                            id: invId,
+                            name: userData.name,
+                            email: userData.email,
+                            investmentId: investment.id,
+                            principalAmount: investment.principalAmount,
+                            currentValue: investment.currentValue
+                        });
+
+                        // Create Table Row
+                        const tr = document.createElement('tr');
+                        tr.className = "hover:bg-gray-50 border-b border-gray-50 transition";
+                        tr.innerHTML = `
+                            <td class="p-4">
+                                <div class="font-medium text-gray-900">${userData.name}</div>
+                                <div class="text-xs text-gray-500">${userData.email}</div>
+                            </td>
+                            <td class="p-4 text-gray-700 font-medium">₹${investment.principalAmount.toLocaleString('en-IN')}</td>
+                            <td class="p-4 text-green-600 font-bold">₹${investment.currentValue.toLocaleString('en-IN')}</td>
+                            <td class="p-4">
+                                <span class="px-2 py-1 text-xs rounded-full ${investment.status === 'active' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}">
+                                    ${investment.status || 'No Data'}
+                                </span>
+                            </td>
+                            <td class="p-4 text-right">
+                                <button onclick="openDividendModal('${invId}')" class="text-blue-600 hover:text-blue-800 bg-blue-50 hover:bg-blue-100 px-3 py-1 rounded text-sm transition">
+                                    <i class="fas fa-hand-holding-usd mr-1"></i> ലാഭം നൽകുക
+                                </button>
+                            </td>
+                        `;
+                        tbody.appendChild(tr);
+                    }
+                });
+
+                if(investorCount === 0) {
+                    tbody.innerHTML = `<tr><td colspan="5" class="p-8 text-center text-gray-500">നിക്ഷേപകർ ആരുമില്ല. പുതിയൊരാളെ ചേർക്കുക.</td></tr>`;
+                }
+
+                // Update Stats UI
+                document.getElementById('stat-investors').innerText = investorCount;
+                document.getElementById('stat-capital').innerText = '₹' + totalCapital.toLocaleString('en-IN');
+                document.getElementById('stat-current').innerText = '₹' + totalCurrentValue.toLocaleString('en-IN');
+
+            } catch (error) {
+                console.error("Error loading dashboard:", error);
+                showMessage("Error", "ഡാറ്റ ലോഡ് ചെയ്യാൻ കഴിഞ്ഞില്ല: " + error.message, "error");
+            }
+        }
+
+        // 3. Add New Investor Logic
+        // Note: For MVP, we manually create user & investment docs. (Proper auth creation needs Firebase Admin SDK in backend)
+        document.getElementById('add-investor-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const btn = document.getElementById('btn-save-investor');
+            btn.innerText = "സേവ് ചെയ്യുന്നു...";
+            btn.disabled = true;
+
+            const name = document.getElementById('inv-name').value;
+            const email = document.getElementById('inv-email').value;
+            const amount = Number(document.getElementById('inv-amount').value);
+
+            try {
+                // Generate a random ID for the investor document
+                const newInvestorRef = doc(collection(db, "users"));
+                const investorId = newInvestorRef.id;
+
+                // 1. Create User Document
+                await setDoc(newInvestorRef, {
+                    name: name,
+                    email: email,
+                    role: "investor",
+                    createdAt: serverTimestamp()
+                });
+
+                // 2. Create Investment Document
+                await addDoc(collection(db, "investments"), {
+                    investorId: investorId,
+                    principalAmount: amount,
+                    currentValue: amount,
+                    status: "active",
+                    lastUpdated: serverTimestamp()
+                });
+
+                // 3. Log initial deposit transaction
+                await addDoc(collection(db, "transactions"), {
+                    investorId: investorId,
+                    type: "deposit",
+                    amount: amount,
+                    date: serverTimestamp(),
+                    description: "ആദ്യ നിക്ഷേപം (Initial Deposit)"
+                });
+
+                closeModal('add-investor-modal');
+                showMessage("വിജയിച്ചു", "പുതിയ നിക്ഷേപകനെ വിജയകരമായി ചേർത്തു.");
+                loadDashboardData(); // Reload table
+
+            } catch (error) {
+                console.error("Error adding investor:", error);
+                showMessage("പരാജയപ്പെട്ടു", "നിക്ഷേപകനെ ചേർക്കാൻ കഴിഞ്ഞില്ല: " + error.message, "error");
+            } finally {
+                btn.innerText = "സേവ് ചെയ്യുക";
+                btn.disabled = false;
+            }
+        });
+
+        // 4. Add Dividend Logic
+        window.openDividendModal = function(investorId) {
+            const investor = investorsData.find(i => i.id === investorId);
+            if(investor) {
+                document.getElementById('div-investor-id').value = investor.id;
+                document.getElementById('div-investor-name').value = `${investor.name} (${investor.email})`;
+                openModal('add-dividend-modal');
+            }
+        }
+
+        document.getElementById('add-dividend-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const btn = document.getElementById('btn-save-dividend');
+            btn.innerText = "അപ്ഡേറ്റ് ചെയ്യുന്നു...";
+            btn.disabled = true;
+
+            const investorId = document.getElementById('div-investor-id').value;
+            const amount = Number(document.getElementById('div-amount').value);
+            const desc = document.getElementById('div-desc').value;
+
+            try {
+                const investor = investorsData.find(i => i.id === investorId);
+                const newCurrentValue = Number(investor.currentValue) + amount;
+
+                // 1. Update Investment Document
+                const invDocRef = doc(db, "investments", investor.investmentId);
+                await updateDoc(invDocRef, {
+                    currentValue: newCurrentValue,
+                    lastUpdated: serverTimestamp()
+                });
+
+                // 2. Log Transaction
+                await addDoc(collection(db, "transactions"), {
+                    investorId: investorId,
+                    type: "dividend",
+                    amount: amount,
+                    date: serverTimestamp(),
+                    description: desc
+                });
+
+                closeModal('add-dividend-modal');
+                showMessage("വിജയിച്ചു", "ലാഭവിഹിതം വിജയകരമായി ചേർത്തു.");
+                loadDashboardData(); // Reload table to show updated amounts
+
+            } catch (error) {
+                console.error("Error adding dividend:", error);
+                showMessage("പരാജയപ്പെട്ടു", "ലാഭവിഹിതം ചേർക്കാൻ കഴിഞ്ഞില്ല: " + error.message, "error");
+            } finally {
+                btn.innerText = "ലാഭം ചേർക്കുക";
+                btn.disabled = false;
+            }
+        });
+
+    </script>
+</body>
+</html>
