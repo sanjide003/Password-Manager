@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="ml">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lakfa Investor Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        body { font-family: 'Inter', sans-serif; }
+    </style>
+</head>
+<body class="bg-gray-50 text-gray-800">
+
+    <nav class="bg-indigo-700 shadow-lg">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16">
+                <div class="flex items-center">
+                    <h1 class="text-white text-2xl font-bold tracking-wider">LAKFA</h1>
+                    <span class="ml-3 px-3 py-1 bg-indigo-800 text-indigo-100 text-xs rounded-full">Investor Portal</span>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <span id="user-name" class="text-indigo-100 text-sm font-medium hidden md:block">loading...</span>
+                    <button id="logout-btn" class="bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded-md text-sm font-medium transition duration-150 ease-in-out">
+                        <i class="fas fa-sign-out-alt mr-2"></i>ലോഗൗട്ട്
+                    </button>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        
+        <div class="mb-8">
+            <h2 id="welcome-message" class="text-2xl font-bold text-gray-800">നമസ്കാരം, നിക്ഷേപകാ...</h2>
+            <p class="text-gray-500 mt-1">നിങ്ങളുടെ നിക്ഷേപ വിവരങ്ങൾ താഴെ നൽകുന്നു.</p>
+        </div>
+
+        <!-- Stats Row -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+            <div class="bg-white rounded-xl shadow-sm p-6 border border-gray-100 flex items-center">
+                <div class="p-4 rounded-full bg-blue-100 text-blue-600 mr-4">
+                    <i class="fas fa-piggy-bank text-2xl"></i>
+                </div>
+                <div>
+                    <p class="text-sm text-gray-500 font-medium">നിക്ഷേപിച്ച തുക (Principal)</p>
+                    <h3 id="stat-principal" class="text-2xl font-bold text-gray-900">₹0</h3>
+                </div>
+            </div>
+            
+            <div class="bg-white rounded-xl shadow-sm p-6 border border-gray-100 flex items-center">
+                <div class="p-4 rounded-full bg-green-100 text-green-600 mr-4">
+                    <i class="fas fa-chart-line text-2xl"></i>
+                </div>
+                <div>
+                    <p class="text-sm text-gray-500 font-medium">ഇപ്പോഴത്തെ മൂല്യം (Current Value)</p>
+                    <h3 id="stat-current" class="text-2xl font-bold text-green-600">₹0</h3>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-xl shadow-sm p-6 border border-gray-100 flex items-center">
+                <div class="p-4 rounded-full bg-yellow-100 text-yellow-600 mr-4">
+                    <i class="fas fa-coins text-2xl"></i>
+                </div>
+                <div>
+                    <p class="text-sm text-gray-500 font-medium">ലഭിച്ച ലാഭം (Total Profit)</p>
+                    <h3 id="stat-profit" class="text-2xl font-bold text-gray-900">₹0</h3>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+            <div class="p-6 border-b border-gray-100">
+                <h2 class="text-lg font-semibold text-gray-800"><i class="fas fa-history mr-2 text-indigo-500"></i>ഇടപാടുകളുടെ വിവരങ്ങൾ (Transaction History)</h2>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="bg-gray-50 text-gray-600 text-sm uppercase tracking-wider">
+                            <th class="p-4 font-medium">തിയ്യതി (Date)</th>
+                            <th class="p-4 font-medium">വിവരണം (Description)</th>
+                            <th class="p-4 font-medium">ഇനം (Type)</th>
+                            <th class="p-4 font-medium text-right">തുക (Amount)</th>
+                        </tr>
+                    </thead>
+                    <tbody id="transactions-table-body" class="divide-y divide-gray-100">
+                        <!-- Data will be populated here via JavaScript -->
+                        <tr>
+                            <td colspan="4" class="p-8 text-center text-gray-500">
+                                <i class="fas fa-spinner fa-spin mr-2"></i> ഡാറ്റ ലോഡ് ചെയ്യുന്നു... (Loading...)
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </main>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, getDoc, collection, query, where, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // നിങ്ങളുടെ firebase-config.js ലെ വിവരങ്ങൾ ഇവിടെ നൽകുക
+        const firebaseConfig = {
+            apiKey: "YOUR_API_KEY",
+            authDomain: "YOUR_AUTH_DOMAIN",
+            projectId: "YOUR_PROJECT_ID",
+            storageBucket: "YOUR_STORAGE_BUCKET",
+            messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
+            appId: "YOUR_APP_ID"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+
+        onAuthStateChanged(auth, async (user) => {
+            if (user) {
+                try {
+                    const userDoc = await getDoc(doc(db, "users", user.uid));
+                    if (userDoc.exists() && userDoc.data().role === 'investor') {
+                        const userData = userDoc.data();
+                        document.getElementById('user-name').innerText = userData.name || user.email;
+                        document.getElementById('welcome-message').innerText = `നമസ്കാരം, ${userData.name}!`;
+                        loadInvestorData(user.uid); // Load data if valid investor
+                    } else {
+                        // Log out if not an investor (e.g. Manager trying to access investor page)
+                        await signOut(auth);
+                        window.location.href = 'index.html';
+                    }
+                } catch (error) {
+                    console.error("Auth check failed:", error);
+                    window.location.href = 'index.html';
+                }
+            } else {
+                window.location.href = 'index.html';
+            }
+        });
+
+        document.getElementById('logout-btn').addEventListener('click', () => {
+            signOut(auth).then(() => {
+                window.location.href = 'index.html';
+            });
+        });
+
+        async function loadInvestorData(userId) {
+            try {
+                // 1. Fetch Investment Details
+                const investmentsRef = collection(db, "investments");
+                const qInvestment = query(investmentsRef, where("investorId", "==", userId));
+                const investmentSnapshot = await getDocs(qInvestment);
+                
+                let principal = 0;
+                let current = 0;
+
+                if (!investmentSnapshot.empty) {
+                    const invData = investmentSnapshot.docs[0].data();
+                    principal = Number(invData.principalAmount);
+                    current = Number(invData.currentValue);
+                }
+
+                const profit = current - principal;
+
+                // Update Stats UI
+                document.getElementById('stat-principal').innerText = '₹' + principal.toLocaleString('en-IN');
+                document.getElementById('stat-current').innerText = '₹' + current.toLocaleString('en-IN');
+                document.getElementById('stat-profit').innerText = '₹' + profit.toLocaleString('en-IN');
+
+                // 2. Fetch Transaction History
+                const transactionsRef = collection(db, "transactions");
+                const qTransactions = query(transactionsRef, where("investorId", "==", userId));
+                const transSnapshot = await getDocs(qTransactions);
+                
+                const tbody = document.getElementById('transactions-table-body');
+                tbody.innerHTML = ''; // Clear loading
+
+                if (transSnapshot.empty) {
+                    tbody.innerHTML = `<tr><td colspan="4" class="p-8 text-center text-gray-500">ഇടപാടുകൾ ലഭ്യമല്ല (No transactions found).</td></tr>`;
+                    return;
+                }
+
+                // Collect and sort transactions by date (descending) on client side
+                let transactions = [];
+                transSnapshot.forEach(docSnap => {
+                    transactions.push({ id: docSnap.id, ...docSnap.data() });
+                });
+
+                transactions.sort((a, b) => {
+                    const dateA = a.date ? a.date.toMillis() : 0;
+                    const dateB = b.date ? b.date.toMillis() : 0;
+                    return dateB - dateA;
+                });
+
+                // Populate Table
+                transactions.forEach(t => {
+                    const tr = document.createElement('tr');
+                    tr.className = "hover:bg-gray-50 border-b border-gray-50 transition";
+                    
+                    // Format Date
+                    let dateStr = "N/A";
+                    if (t.date) {
+                        const d = t.date.toDate();
+                        dateStr = d.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+                    }
+
+                    // Format Type Badge
+                    let typeHtml = "";
+                    let amountClass = "text-gray-900";
+                    if(t.type === 'deposit') {
+                        typeHtml = `<span class="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full">നിക്ഷേപം (Deposit)</span>`;
+                    } else if (t.type === 'dividend') {
+                        typeHtml = `<span class="px-2 py-1 bg-green-100 text-green-800 text-xs rounded-full">ലാഭം (Dividend)</span>`;
+                        amountClass = "text-green-600 font-bold";
+                    }
+
+                    tr.innerHTML = `
+                        <td class="p-4 text-sm text-gray-600">${dateStr}</td>
+                        <td class="p-4 font-medium text-gray-900">${t.description}</td>
+                        <td class="p-4">${typeHtml}</td>
+                        <td class="p-4 text-right ${amountClass}">₹${Number(t.amount).toLocaleString('en-IN')}</td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+
+            } catch (error) {
+                console.error("Error loading investor data:", error);
+                const tbody = document.getElementById('transactions-table-body');
+                tbody.innerHTML = `<tr><td colspan="4" class="p-8 text-center text-red-500">ഡാറ്റ ലോഡ് ചെയ്യാൻ കഴിഞ്ഞില്ല. ദയവായി പേജ് റിഫ്രഷ് ചെയ്യുക.</td></tr>`;
+            }
+        }
+    </script>
+</body>
+</html>
